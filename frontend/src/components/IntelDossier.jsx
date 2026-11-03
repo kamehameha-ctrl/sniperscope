@@ -18,7 +18,8 @@ import {
   Clock,
   Trash2,
   RefreshCw,
-  Zap
+  Zap,
+  Bug
 } from 'lucide-react';
 
 function SeverityBadge({ severity, cvss }) {
@@ -252,6 +253,7 @@ export default function IntelDossier({
     { id: 'http', label: 'Web, TLS & WAF' },
     { id: 'dns', label: `DNS & Subdominios (${summary.subdomains_count || 0})` },
     { id: 'playbook', label: 'Playbook CLI' },
+    { id: 'dorks', label: 'Dorks OSINT' },
   ];
 
   const showSection = (sec) => activeSection === 'all' || activeSection === sec;
@@ -380,12 +382,12 @@ export default function IntelDossier({
                   {http_audit?.waf_cdn || 'Sin WAF detectado'}
                 </div>
                 <div className="flex items-center space-x-2 mt-1 text-[10px]">
-                  <span className={dns.email_security?.has_spf ? 'text-[#10b981]' : 'text-[#ef4444]'}>
-                    SPF: {dns.email_security?.has_spf ? 'OK' : 'NO'}
+                  <span className={dns.email_security?.has_spf ? (dns.email_security?.spf_policy === 'permissive' ? 'text-[#facc15]' : 'text-[#10b981]') : 'text-[#ef4444]'}>
+                    SPF: {dns.email_security?.has_spf ? (dns.email_security?.spf_policy === 'permissive' ? 'PERMISIVO' : 'OK') : 'NO'}
                   </span>
                   <span>·</span>
-                  <span className={dns.email_security?.has_dmarc ? 'text-[#10b981]' : 'text-[#ef4444]'}>
-                    DMARC: {dns.email_security?.has_dmarc ? 'OK' : 'NO'}
+                  <span className={dns.email_security?.has_dmarc ? (dns.email_security?.dmarc_policy === 'none' ? 'text-[#facc15]' : 'text-[#10b981]') : 'text-[#ef4444]'}>
+                    DMARC: {dns.email_security?.has_dmarc ? (dns.email_security?.dmarc_policy === 'none' ? 'DÉBIL (p=none)' : `OK (${dns.email_security?.dmarc_policy})`) : 'NO'}
                   </span>
                 </div>
               </div>
@@ -1007,26 +1009,105 @@ export default function IntelDossier({
                     {http_audit.wappalyzer.map((tech, i) => (
                       <div
                         key={i}
-                        className="p-3 bg-[#090b10] border border-[#1e2638] hover:border-[#38bdf8]/50 rounded transition-all flex flex-col justify-between space-y-2"
+                        className={`p-3 rounded transition-all flex flex-col justify-between space-y-2 border ${
+                          tech.vulnerable
+                            ? 'bg-[#14080a] border-[#ef4444]/60 hover:border-[#ef4444]'
+                            : 'bg-[#090b10] border-[#1e2638] hover:border-[#38bdf8]/50'
+                        }`}
                       >
                         <div>
                           <div className="flex items-start justify-between gap-1.5">
                             <span className="text-xs font-bold text-white leading-tight">{tech.name}</span>
-                            {tech.version && (
-                              <span className="px-1.5 py-0.2 bg-[#0284c7]/20 border border-[#38bdf8]/60 text-[#38bdf8] rounded text-[10px] font-mono font-bold shrink-0">
-                                v{tech.version}
-                              </span>
-                            )}
+                            <div className="flex items-center space-x-1 shrink-0">
+                              {tech.version && (
+                                <span className="px-1.5 py-0.2 bg-[#0284c7]/20 border border-[#38bdf8]/60 text-[#38bdf8] rounded text-[10px] font-mono font-bold">
+                                  v{tech.version}
+                                </span>
+                              )}
+                              {tech.vulnerable && (
+                                <span className="px-1.5 py-0.2 bg-[#450a0a] border border-[#ef4444]/80 text-[#fca5a5] rounded text-[9px] font-mono font-bold flex items-center space-x-1">
+                                  <AlertTriangle size={9} className="text-[#ef4444]" />
+                                  <span>VULN</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="text-[10px] font-mono font-semibold text-[#10b981] uppercase tracking-wider mt-0.5">
                             {tech.category}
                           </div>
                           {tech.description && (
-                            <p className="text-[11px] text-slate-400 font-sans mt-1.5 leading-snug line-clamp-3">
+                            <p className="text-[11px] text-slate-400 font-sans mt-1.5 leading-snug line-clamp-2">
                               {tech.description}
                             </p>
                           )}
                         </div>
+
+                        {/* Desglose de CVEs asociadas al componente si es vulnerable */}
+                        {tech.vulnerable && tech.vulnerabilities && tech.vulnerabilities.length > 0 && (
+                          <div className="pt-2 border-t border-[#3b1216] space-y-1.5">
+                            <div className="text-[10px] font-mono font-bold text-red-300 flex items-center justify-between">
+                              <span className="flex items-center space-x-1">
+                                <Bug size={11} className="text-[#ef4444]" />
+                                <span>CVEs Críticas / XSS ({tech.cve_count}):</span>
+                              </span>
+                              <span className="text-[9px] px-1 rounded bg-[#2b0d10] text-red-300 border border-red-800">
+                                {tech.max_severity}
+                              </span>
+                            </div>
+                            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                              {tech.vulnerabilities.map((v, vIdx) => (
+                                <div key={vIdx} className="p-1.5 bg-[#080203] border border-[#7f1d1d]/40 rounded text-[10px] font-mono">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-bold text-red-300">{v.cve}</span>
+                                    <span className="text-[9px] text-slate-400">CVSS {v.cvss || '6.1'}</span>
+                                  </div>
+                                  <div className="text-slate-400 text-[10px] mt-0.5 font-sans leading-tight line-clamp-2">
+                                    {v.title || v.summary}
+                                  </div>
+                                  <div className="flex items-center space-x-2 mt-1 pt-1 border-t border-[#1e2638] text-[9px]">
+                                    {v.poc_url && (
+                                      <a
+                                        href={v.poc_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[#38bdf8] hover:underline inline-flex items-center space-x-0.5 font-bold"
+                                        title="Buscar Proof of Concept (PoC) en GitHub"
+                                      >
+                                        <span>PoC (GitHub)</span>
+                                        <ExternalLink size={8} />
+                                      </a>
+                                    )}
+                                    {v.exploitdb_url && (
+                                      <a
+                                        href={v.exploitdb_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-amber-400 hover:underline inline-flex items-center space-x-0.5"
+                                        title="Buscar exploit en Exploit-DB"
+                                      >
+                                        <span>Exploit-DB</span>
+                                        <ExternalLink size={8} />
+                                      </a>
+                                    )}
+                                    {v.nvd_url && (
+                                      <a
+                                        href={v.nvd_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-slate-400 hover:text-white inline-flex items-center space-x-0.5"
+                                        title="Ficha oficial en NIST NVD"
+                                      >
+                                        <span>NVD</span>
+                                        <ExternalLink size={8} />
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {tech.website && (
                           <div className="pt-1.5 border-t border-[#141b29] flex items-center justify-between text-[10px] font-mono">
                             <span className="text-slate-600">Doc oficial</span>
@@ -1361,6 +1442,190 @@ export default function IntelDossier({
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 7. ASISTENTE DE DORKS OSINT & BÚSQUEDA DE SUPERFICIE OCULTA */}
+        {showSection('dorks') && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between border-b border-[#1e2638] pb-2">
+              <div className="flex items-center space-x-2">
+                <Search size={15} className="text-[#38bdf8]" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+                  Asistente de Dorks OSINT & Búsqueda de Superficie Oculta
+                </h2>
+              </div>
+              <span className="text-[10px] font-mono text-slate-500">Consultas avanzadas preconfiguradas</span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Shodan Dorks */}
+              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
+                <div className="flex items-center space-x-2 text-xs font-bold uppercase font-mono text-[#f87171]">
+                  <Flame size={14} className="text-[#f87171]" />
+                  <span>Dorks para Shodan (Shadow IT & Certificados)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-sans">
+                  Descubre servidores satélite, entornos de staging o activos del objetivo no registrados en el DNS oficial:
+                </p>
+                <div className="space-y-2 pt-1 font-mono text-xs">
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Certificados SSL / SANs</span>
+                      <code className="text-slate-200">ssl:"{target}"</code>
+                    </div>
+                    <a
+                      href={`https://www.shodan.io/search?query=ssl%3A%22${encodeURIComponent(target)}%22`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>Lanzar Shodan</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Hostname / DNS inverso</span>
+                      <code className="text-slate-200">hostname:"{target}"</code>
+                    </div>
+                    <a
+                      href={`https://www.shodan.io/search?query=hostname%3A%22${encodeURIComponent(target)}%22`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>Lanzar Shodan</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+                  {shodan[0]?.org && (
+                    <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Rango de Organización</span>
+                        <code className="text-slate-200">org:"{shodan[0].org}"</code>
+                      </div>
+                      <a
+                        href={`https://www.shodan.io/search?query=org%3A%22${encodeURIComponent(shodan[0].org)}%22`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                      >
+                        <span>Lanzar Shodan</span>
+                        <ExternalLink size={9} />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Google Dorks */}
+              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
+                <div className="flex items-center space-x-2 text-xs font-bold uppercase font-mono text-[#facc15]">
+                  <Search size={14} className="text-[#facc15]" />
+                  <span>Google Hacking / Dorks (Fugas & Paneles)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-sans">
+                  Sondea archivos de configuración expuestos, backups y paneles de acceso con indexación pública:
+                </p>
+                <div className="space-y-2 pt-1 font-mono text-xs">
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Ficheros Sensibles (.env, .sql, .log)</span>
+                      <code className="text-slate-200 text-[11px]">ext:env | ext:sql | ext:log</code>
+                    </div>
+                    <a
+                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+ext%3Aenv+OR+ext%3Asql+OR+ext%3Alog+OR+ext%3Abak+OR+ext%3Ayml`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>Google Dork</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Paneles de Administración / Login</span>
+                      <code className="text-slate-200 text-[11px]">inurl:admin | login | dashboard</code>
+                    </div>
+                    <a
+                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+inurl%3Aadmin+OR+inurl%3Alogin+OR+inurl%3Adashboard`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>Google Dork</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Listados de Directorios Expuestos</span>
+                      <code className="text-slate-200 text-[11px]">intitle:"index of"</code>
+                    </div>
+                    <a
+                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+intitle%3A%22index+of%22`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>Google Dork</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Plataformas de Inteligencia de Amenazas Externas */}
+            <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2">
+              <div className="text-[11px] font-bold uppercase font-mono text-slate-300">
+                Plataformas de Análisis de Amenazas y Reconocimiento Pasivo
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-xs">
+                <a
+                  href={`https://urlscan.io/domain/${target}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] hover:border-[#38bdf8] text-slate-300 hover:text-white rounded transition-colors inline-flex items-center space-x-1.5"
+                >
+                  <Globe size={13} className="text-[#38bdf8]" />
+                  <span>URLScan.io</span>
+                  <ExternalLink size={10} />
+                </a>
+                <a
+                  href={`https://search.censys.io/search?q=${encodeURIComponent(target)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] hover:border-[#38bdf8] text-slate-300 hover:text-white rounded transition-colors inline-flex items-center space-x-1.5"
+                >
+                  <Server size={13} className="text-[#10b981]" />
+                  <span>Censys Search</span>
+                  <ExternalLink size={10} />
+                </a>
+                <a
+                  href={`https://crt.sh/?q=%.${encodeURIComponent(target)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] hover:border-[#38bdf8] text-slate-300 hover:text-white rounded transition-colors inline-flex items-center space-x-1.5"
+                >
+                  <Lock size={13} className="text-[#facc15]" />
+                  <span>crt.sh (CT Logs)</span>
+                  <ExternalLink size={10} />
+                </a>
+                <a
+                  href={`https://securitytrails.com/domain/${encodeURIComponent(target)}/dns`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] hover:border-[#38bdf8] text-slate-300 hover:text-white rounded transition-colors inline-flex items-center space-x-1.5"
+                >
+                  <Crosshair size={13} className="text-[#c084fc]" />
+                  <span>SecurityTrails DNS</span>
+                  <ExternalLink size={10} />
+                </a>
               </div>
             </div>
           </section>

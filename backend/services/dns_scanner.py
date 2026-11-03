@@ -47,11 +47,52 @@ async def resolve_dns_records(domain: str) -> Dict[str, Any]:
     except Exception:
         pass
 
-    # Detección de SPF dentro de registros TXT
+    # Detección y análisis profundo de SPF dentro de registros TXT
     spf_record = next(
         (rec["value"] for rec in results["TXT"] if rec["value"].startswith("v=spf1")),
         None
     )
+    spf_policy = "missing"
+    spf_warning = None
+    if spf_record:
+        if "+all" in spf_record or "?all" in spf_record:
+            spf_policy = "permissive"
+            spf_warning = "Directiva permisiva (+all o ?all) detectada: cualquier IP puede enviar correos autorizados."
+        elif "-all" in spf_record:
+            spf_policy = "hard_fail"
+        elif "~all" in spf_record:
+            spf_policy = "soft_fail"
+        else:
+            spf_policy = "neutral"
+
+    # Análisis de directivas DMARC y riesgo de Spoofing / Phishing
+    dmarc_policy = "missing"
+    dmarc_status = "CRITICAL_MISSING"
+    is_spoofing_vulnerable = True
+    dmarc_detail = "Sin registro DMARC configurado. El dominio es altamente vulnerable a suplantación directa (email spoofing)."
+
+    if dmarc_record:
+        dmarc_lower = dmarc_record.lower()
+        if "p=reject" in dmarc_lower:
+            dmarc_policy = "reject"
+            dmarc_status = "STRICT_PROTECTION"
+            is_spoofing_vulnerable = False
+            dmarc_detail = "Política DMARC estricta (p=reject): los servidores receptores descartan de inmediato correos suplantados."
+        elif "p=quarantine" in dmarc_lower:
+            dmarc_policy = "quarantine"
+            dmarc_status = "PROTECTED"
+            is_spoofing_vulnerable = False
+            dmarc_detail = "Política DMARC activa (p=quarantine): los correos sospechosos se envían a la carpeta de spam/cuarentena."
+        elif "p=none" in dmarc_lower:
+            dmarc_policy = "none"
+            dmarc_status = "WEAK_MONITOR"
+            is_spoofing_vulnerable = True
+            dmarc_detail = "Política DMARC en modo monitor (p=none): no bloquea ni aísla correos falsificados, permitiendo suplantación activa."
+        else:
+            dmarc_policy = "unknown"
+            dmarc_status = "UNKNOWN"
+            is_spoofing_vulnerable = True
+            dmarc_detail = "Registro DMARC presente pero sin directiva p= reconocida."
 
     return {
         "records": results,
@@ -59,7 +100,13 @@ async def resolve_dns_records(domain: str) -> Dict[str, Any]:
         "email_security": {
             "has_spf": spf_record is not None,
             "spf_raw": spf_record,
+            "spf_policy": spf_policy,
+            "spf_warning": spf_warning,
             "has_dmarc": dmarc_record is not None,
             "dmarc_raw": dmarc_record,
+            "dmarc_policy": dmarc_policy,
+            "dmarc_status": dmarc_status,
+            "is_spoofing_vulnerable": is_spoofing_vulnerable,
+            "spoofing_detail": dmarc_detail,
         }
     }

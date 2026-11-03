@@ -174,4 +174,63 @@ def build_attack_surface_graph(scan_result: Dict[str, Any]) -> Dict[str, List[Di
                     }
                 })
 
+    # 6. Añadir vulnerabilidades web globales (ej: SCA Web / Wappalyzer CVEs)
+    all_vulns = scan_result.get("vulnerabilities", [])
+    for v_info in all_vulns[:25]:
+        cve = v_info.get("cve")
+        if not cve:
+            continue
+        cve_id = f"cve_{cve}"
+        if cve_id not in existing_nodes:
+            nodes.append({
+                "data": {
+                    "id": cve_id,
+                    "label": f"{cve}" + (f" ({v_info['cvss']})" if v_info.get("cvss") else ""),
+                    "type": "cve",
+                    "severity": (v_info.get("severity") or "HIGH").lower(),
+                    "meta": v_info,
+                }
+            })
+            existing_nodes.add(cve_id)
+
+            linked = False
+            for host_ip in v_info.get("ips", []):
+                for p_num in v_info.get("ports", []):
+                    port_node_id = f"port_{host_ip}_{p_num}"
+                    if port_node_id in existing_nodes:
+                        edges.append({
+                            "data": {
+                                "id": f"edge_{port_node_id}_{cve_id}",
+                                "source": port_node_id,
+                                "target": cve_id,
+                                "label": "vulnerable_to"
+                            }
+                        })
+                        linked = True
+                        break
+                if linked:
+                    break
+                ip_node_id = f"ip_{host_ip}"
+                if ip_node_id in existing_nodes:
+                    edges.append({
+                        "data": {
+                            "id": f"edge_{ip_node_id}_{cve_id}",
+                            "source": ip_node_id,
+                            "target": cve_id,
+                            "label": "vulnerability"
+                        }
+                    })
+                    linked = True
+                    break
+
+            if not linked:
+                edges.append({
+                    "data": {
+                        "id": f"edge_{root_id}_{cve_id}",
+                        "source": root_id,
+                        "target": cve_id,
+                        "label": "web_vulnerability"
+                    }
+                })
+
     return {"nodes": nodes, "edges": edges}

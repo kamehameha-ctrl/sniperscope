@@ -259,6 +259,23 @@ def _evaluate_risk_and_findings(
             "title": f"Riesgo de Suplantación de Dominio de Correo (Falta {' y '.join(missing_mail)})",
             "detail": "El dominio carece de políticas completas contra Email Spoofing y Phishing."
         })
+    elif email_sec.get("dmarc_policy") == "none":
+        score += 6
+        findings.append({
+            "severity": "MEDIUM",
+            "title": "Política DMARC Permisiva (p=none - Vulnerable a Phishing/Spoofing)",
+            "detail": "DMARC está configurado en modo monitor p=none sin bloquear ni enviar a cuarentena correos con remitente falsificado."
+        })
+
+    # 10. Vulnerabilidades Críticas en Componentes Web / JavaScript (SCA)
+    sca_findings = [v for v in cve_list if v.get("source") == "SCA Web Technology Audit"]
+    if sca_findings:
+        score += min(25, len(sca_findings) * 5)
+        findings.append({
+            "severity": "HIGH",
+            "title": f"{len(sca_findings)} Vulnerabilidad(es) en Componentes Web (SCA / XSS / Prototype Pollution)",
+            "detail": f"Se identificaron tecnologías desactualizadas con fallos de seguridad documentados: {', '.join(set(v.get('service', '') for v in sca_findings[:3]))}."
+        })
 
     final_score = min(100, score)
     if final_score >= 75:
@@ -650,6 +667,37 @@ async def scan_target(
                 for p in cve_obj.get("ports", []):
                     if p not in existing.get("ports", []):
                         existing.setdefault("ports", []).append(p)
+
+    # 2. Incorporar vulnerabilidades detectadas por el motor SCA en componentes web (Wappalyzer)
+    sca_vulns = http_res.get("sca_vulnerabilities", []) if isinstance(http_res, dict) else []
+    primary_ip_str = clean_shodan[0].get("ip") if clean_shodan else (dns_res.get("primary_ips", [None])[0] if isinstance(dns_res, dict) and dns_res.get("primary_ips") else None)
+    for sca_item in sca_vulns:
+        cve_id = sca_item.get("cve")
+        if not cve_id:
+            continue
+        if cve_id not in raw_vulns_map:
+            raw_vulns_map[cve_id] = {
+                "cve": cve_id,
+                "summary": sca_item.get("summary", ""),
+                "cvss": sca_item.get("cvss", 6.1),
+                "severity": sca_item.get("severity", "MEDIUM"),
+                "service": sca_item.get("service") or f"{sca_item.get('product', 'Web Component')} {sca_item.get('version', '')}".strip(),
+                "product": sca_item.get("product", ""),
+                "version": sca_item.get("version", ""),
+                "ports": [80, 443],
+                "ips": [primary_ip_str] if primary_ip_str else [],
+                "poc_url": sca_item.get("poc_url"),
+                "exploitdb_url": sca_item.get("exploitdb_url"),
+                "nvd_url": sca_item.get("nvd_url"),
+                "vector": sca_item.get("vector", ""),
+                "remediation": sca_item.get("remediation", ""),
+                "source": "SCA Web Technology Audit"
+            }
+        else:
+            existing = raw_vulns_map[cve_id]
+            for p in (80, 443):
+                if p not in existing.setdefault("ports", []):
+                    existing["ports"].append(p)
 
     cve_list, subdomain_ips = await asyncio.gather(
         enrich_cve_dictionary(raw_vulns_map, max_enrich=75),

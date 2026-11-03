@@ -10,6 +10,7 @@ import time
 import hashlib
 from datetime import datetime, timezone
 import httpx
+from services.sca_scanner import enrich_wappalyzer_components
 
 
 SECURITY_HEADERS_SPEC = [
@@ -534,6 +535,7 @@ async def inspect_http_headers(target: str, scan_mode: str = "passive") -> Dict[
         "cors_policy": None,
         "technologies": [],
         "wappalyzer": [],
+        "sca_vulnerabilities": [],
         "uptime": {
             "status": "Inactive",
             "latency_ms": None,
@@ -602,7 +604,14 @@ async def inspect_http_headers(target: str, scan_mode: str = "passive") -> Dict[
                 meta_info = _extract_page_metadata(resp.text)
 
                 wapp_tech = _detect_wappalyzer_technologies(raw_dict, resp.text, meta_info)
+                wapp_tech = enrich_wappalyzer_components(wapp_tech)
                 result["wappalyzer"] = wapp_tech
+
+                all_sca_vulns = []
+                for t in wapp_tech:
+                    all_sca_vulns.extend(t.get("vulnerabilities", []))
+                result["sca_vulnerabilities"] = all_sca_vulns
+
                 result["technologies"] = [
                     f"{t['name']}{f' v{t['version']}' if t['version'] else ''} ({t['category']})"
                     for t in wapp_tech

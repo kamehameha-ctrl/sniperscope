@@ -143,6 +143,8 @@ async def enrich_cve_dictionary(raw_vulns_map: Dict[str, Dict[str, Any]], max_en
             "nvd_url": f"https://nvd.nist.gov/vuln/detail/{cve_id}",
             "mitre_url": f"https://cve.mitre.org/cgi-bin/cvename.cgi?name={cve_id}",
             "exploitdb_url": f"https://www.exploit-db.com/search?cve={clean_num}",
+            "packetstorm_url": f"https://packetstormsecurity.com/search/?q={cve_id}",
+            "vulners_url": f"https://vulners.com/search?query={cve_id}",
             "github_poc_url": f"https://github.com/search?q={cve_id}+poc+OR+exploit&type=repositories",
         })
 
