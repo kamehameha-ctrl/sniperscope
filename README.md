@@ -87,24 +87,6 @@ flowchart LR
 
 ---
 
-## ⚡ Why SniperScope? (Feature Comparison)
-
-Traditional CLI tools require chaining multiple disparate scripts, manual regex parsing, and lack visual topology or unified CVE prioritization. SniperScope unifies these domains into a single high-speed workstation:
-
-| Feature / Capability | SniperScope v3.5 | theHarvester | OWASP Amass | SpiderFoot | Sherlock CLI |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Real-Time Interactive Topology Graph** | ✅ Cytoscape.js | ❌ | ❌ (Static export) | ⚠️ Basic 2D graph | ❌ |
-| **Shodan CVEDB + EPSS + CISA KEV** | ✅ Automatic | ❌ | ❌ | ⚠️ Needs API keys | ❌ |
-| **Dual OPSEC Modes (Stealth vs Active)** | ✅ 1-Click Toggle | ❌ | ⚠️ Complex flags | ⚠️ Complex config | ❌ |
-| **Zero-Dependency Web SCA Engine** | ✅ Integrated | ❌ | ❌ | ⚠️ Slow modules | ❌ |
-| **TLS X.509 Crypto Deep-Audit** | ✅ Full Chain & SANs | ❌ | ⚠️ Basic cert | ⚠️ Basic cert | ❌ |
-| **Spanish Official Registries (BOE/BORME)**| ✅ Dedicated Hub | ❌ | ❌ | ❌ | ❌ |
-| **SOCMINT Multi-Platform Discovery** | ✅ 400+ Platforms (SSE)| ❌ | ❌ | ⚠️ Moderate | ✅ CLI only |
-| **OWASP 2025 Parametrized Playbook** | ✅ 39 CLI Commands | ❌ | ❌ | ❌ | ❌ |
-| **Multi-Format Forensic Exporter** | ✅ PDF, HTML, MD, Log | ⚠️ HTML/XML | ❌ | ⚠️ CSV/JSON | ⚠️ TXT |
-
----
-
 ## 🎯 Core Use Cases
 
 - 🛡️ **External Attack Surface Management (EASM):** Continuously monitor perimeter exposures, shadow IT, expiring TLS certificates, dangling subdomains, and unexpected listening ports across enterprise assets.
