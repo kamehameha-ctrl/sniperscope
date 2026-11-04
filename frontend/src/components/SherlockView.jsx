@@ -28,7 +28,9 @@ import {
 import { fetchSherlockSites, startSherlockStream, fetchPhoneOsint, fetchEmailOsint } from '../services/api';
 
 const CATEGORY_ICONS = {
+  'All': Globe,
   'Todos': Globe,
+  'Spain (ES)': Globe,
   'España (ES)': Globe,
   'Coding & Dev': Code,
   'Social Media': Share2,
@@ -39,6 +41,7 @@ const CATEGORY_ICONS = {
 };
 
 const CATEGORY_COLORS = {
+  'Spain (ES)': 'border-amber-500/40 text-amber-300 bg-amber-950/30',
   'España (ES)': 'border-amber-500/40 text-amber-300 bg-amber-950/30',
   'Coding & Dev': 'border-sky-500/30 text-sky-400 bg-sky-950/30',
   'Social Media': 'border-purple-500/30 text-purple-400 bg-purple-950/30',
@@ -75,8 +78,8 @@ export default function SherlockView({ onBackToEasm }) {
   // --- ESTADO SHERLOCK USERNAME ---
   const [username, setUsername] = useState('');
   const [activeUsername, setActiveUsername] = useState('');
-  const [categories, setCategories] = useState(['Todos']);
-  const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [categories, setCategories] = useState(['All']);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [totalCatalogCount, setTotalCatalogCount] = useState(0);
 
   const [isScanning, setIsScanning] = useState(false);
@@ -93,30 +96,33 @@ export default function SherlockView({ onBackToEasm }) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerIntervalRef = useRef(null);
 
-  // --- ESTADO ESPAÑA OSINT HUB ---
+  // --- SPAIN OSINT HUB STATE ---
   const [spainQuery, setSpainQuery] = useState('');
 
-  // --- ESTADO PHONE HUNTER ---
+  // --- PHONE HUNTER STATE ---
   const [phoneQuery, setPhoneQuery] = useState('');
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneData, setPhoneData] = useState(null);
   const [phoneError, setPhoneError] = useState(null);
 
-  // --- ESTADO EMAIL HUNTER ---
+  // --- EMAIL HUNTER STATE ---
   const [emailQuery, setEmailQuery] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailData, setEmailData] = useState(null);
   const [emailError, setEmailError] = useState(null);
 
-  // Cargar catálogo de plataformas Sherlock
+  // Load Sherlock platform catalog
   useEffect(() => {
     fetchSherlockSites()
       .then((data) => {
-        if (data.categories) setCategories(data.categories);
+        if (data.categories) {
+          const mapped = data.categories.map((c) => (c === 'Todos' ? 'All' : c === 'España (ES)' ? 'Spain (ES)' : c));
+          setCategories(mapped);
+        }
         if (data.total) setTotalCatalogCount(data.total);
       })
       .catch((err) => {
-        console.error('Error al cargar catálogo de Sherlock:', err);
+        console.error('Error loading Sherlock catalog:', err);
       });
 
     return () => {
@@ -150,7 +156,8 @@ export default function SherlockView({ onBackToEasm }) {
       setElapsedSeconds(((Date.now() - startTimeRef.current) / 1000).toFixed(1));
     }, 100);
 
-    const cancelFn = startSherlockStream(clean, selectedCategory, {
+    const apiCategory = selectedCategory === 'All' ? 'Todos' : selectedCategory === 'Spain (ES)' ? 'España (ES)' : selectedCategory;
+    const cancelFn = startSherlockStream(clean, apiCategory, {
       onInit: (data) => {
         setProgress({ checked: 0, total: data.total, found: 0 });
       },
@@ -172,7 +179,7 @@ export default function SherlockView({ onBackToEasm }) {
       },
       onError: (err) => {
         setIsScanning(false);
-        setErrorMessage(err.message || 'Error durante el sondeo SOCMINT');
+        setErrorMessage(err.message || 'Error during SOCMINT reconnaissance');
         if (timerIntervalRef.current) {
           clearInterval(timerIntervalRef.current);
           timerIntervalRef.current = null;
@@ -201,7 +208,7 @@ export default function SherlockView({ onBackToEasm }) {
     setTimeout(() => setCopiedUrl(null), 1800);
   };
 
-  // Búsqueda de teléfono
+  // Phone lookup
   const handlePhoneSearch = async (e) => {
     if (e) e.preventDefault();
     const clean = phoneQuery.trim();
@@ -217,13 +224,13 @@ export default function SherlockView({ onBackToEasm }) {
         setPhoneData(data);
       }
     } catch (err) {
-      setPhoneError(err.message || 'Error al analizar el teléfono');
+      setPhoneError(err.message || 'Error analyzing phone number');
     } finally {
       setPhoneLoading(false);
     }
   };
 
-  // Búsqueda de email
+  // Email lookup
   const handleEmailSearch = async (e) => {
     if (e) e.preventDefault();
     const clean = emailQuery.trim();
@@ -239,7 +246,7 @@ export default function SherlockView({ onBackToEasm }) {
         setEmailData(data);
       }
     } catch (err) {
-      setEmailError(err.message || 'Error al analizar el correo');
+      setEmailError(err.message || 'Error analyzing email address');
     } finally {
       setEmailLoading(false);
     }
@@ -271,7 +278,7 @@ export default function SherlockView({ onBackToEasm }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sherlock_osint_${activeUsername || 'user'}.json`;
+    a.download = `footprint_osint_${activeUsername || 'user'}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -279,28 +286,28 @@ export default function SherlockView({ onBackToEasm }) {
   };
 
   const exportToMarkdown = () => {
-    let md = `# 🕵️ Dossier Forense de Identidad Digital (SOCMINT)\n\n`;
-    md += `**Objetivo (Username / Alias):** \`@${activeUsername}\`\n`;
-    md += `**Fecha de Extracción:** ${new Date().toLocaleString()} (UTC)\n`;
-    md += `**Plataformas Analizadas:** ${progress.checked} de ${progress.total}\n`;
-    md += `**Perfiles Confirmados:** ${confirmedProfiles.length}\n`;
-    md += `**Filtro Aplicado:** ${selectedCategory}\n\n`;
+    let md = `# 🕵️ Digital Footprint Forensic Dossier (SOCMINT)\n\n`;
+    md += `**Target (Username / Handle):** \`@${activeUsername}\`\n`;
+    md += `**Extraction Timestamp:** ${new Date().toLocaleString()} (UTC)\n`;
+    md += `**Platforms Audited:** ${progress.checked} of ${progress.total}\n`;
+    md += `**Confirmed Profiles:** ${confirmedProfiles.length}\n`;
+    md += `**Category Filter:** ${selectedCategory}\n\n`;
     md += `---\n\n`;
-    md += `## 🌐 Perfiles Digitales Verificados\n\n`;
-    md += `| Plataforma | Categoría | Enlace al Perfil | Latencia | Estado HTTP |\n`;
+    md += `## 🌐 Verified Digital Profiles\n\n`;
+    md += `| Platform | Category | Profile URL | Latency | HTTP Status |\n`;
     md += `| :--- | :--- | :--- | :--- | :--- |\n`;
 
     confirmedProfiles.forEach((p) => {
       md += `| **${p.site}** | ${p.category} | [${p.url}](${p.url}) | ${p.elapsed_ms}ms | ${p.status_code || 200} |\n`;
     });
 
-    md += `\n---\n*Generado por SniperScope v3.2 // Sherlock SOCMINT Hunter*\n`;
+    md += `\n---\n*Generated by SniperScope v3.5 // Digital Footprint Intelligence Suite*\n`;
 
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sherlock_dossier_${activeUsername || 'user'}.md`;
+    a.download = `footprint_dossier_${activeUsername || 'user'}.md`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -317,11 +324,11 @@ export default function SherlockView({ onBackToEasm }) {
           <button
             type="button"
             onClick={onBackToEasm}
-            title="Volver a la vista de Red / IP (SniperScope)"
+            title="Return to Network / IP Scanner (SniperScope)"
             className="flex items-center space-x-1.5 px-2.5 py-1 text-xs font-mono rounded border border-[#1e2638] bg-[#0f172a] text-slate-300 hover:text-sky-400 hover:border-sky-500/50 transition-colors cursor-pointer"
           >
             <ArrowLeft size={14} />
-            <span>Volver a EASM</span>
+            <span>Back to EASM</span>
           </button>
           <div className="h-4 w-px bg-[#1e2638]" />
           <div className="flex items-center space-x-2">
@@ -331,23 +338,23 @@ export default function SherlockView({ onBackToEasm }) {
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-mono font-bold tracking-wider text-sm text-slate-100">
-                  SHERLOCK // SUITE DE INTELIGENCIA OSINT
+                  DIGITAL FOOTPRINT // OSINT INTELLIGENCE SUITE
                 </span>
                 <span className="text-[10px] font-mono px-1.5 py-0.2 bg-purple-950/50 text-purple-300 border border-purple-500/30 rounded">
-                  {totalCatalogCount > 0 ? `${totalCatalogCount} PLATAFORMAS` : 'INDETECTABLE & PARALELO'}
+                  {totalCatalogCount > 0 ? `${totalCatalogCount} PLATFORMS` : 'PARALLEL & LOW NOISE'}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Acciones de exportación (solo en pestaña username con resultados) */}
+        {/* Export Actions (only on username tab with results) */}
         {osintTab === 'username' && confirmedProfiles.length > 0 && (
           <div className="flex items-center gap-2">
             <button
               onClick={exportToMarkdown}
               className="px-2.5 py-1 rounded bg-[#1e2638] hover:bg-[#28354f] text-slate-200 text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-700/50"
-              title="Descargar Dossier en Markdown"
+              title="Download Markdown Dossier"
             >
               <Download size={13} />
               <span>Dossier (.md)</span>
@@ -355,7 +362,7 @@ export default function SherlockView({ onBackToEasm }) {
             <button
               onClick={exportToJson}
               className="px-2.5 py-1 rounded bg-[#1e2638] hover:bg-[#28354f] text-slate-200 text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-700/50"
-              title="Descargar en JSON crudo"
+              title="Download Raw JSON"
             >
               <Download size={13} />
               <span>JSON</span>
@@ -364,7 +371,7 @@ export default function SherlockView({ onBackToEasm }) {
         )}
       </div>
 
-      {/* 2. Barra de Navegación por Pestañas Especializadas */}
+      {/* 2. Specialized OSINT Tab Navigation */}
       <div className="bg-[#0b0e14] border-b border-[#1e2638] px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0">
         <button
           type="button"
@@ -389,8 +396,8 @@ export default function SherlockView({ onBackToEasm }) {
           }`}
         >
           <span className="text-sm leading-none">🇪🇸</span>
-          <span>España OSINT Hub</span>
-          <span className="text-[9px] px-1 py-0.2 bg-amber-900/50 text-amber-300 rounded border border-amber-600/40 font-mono">UNISHKA</span>
+          <span>Spain OSINT Hub</span>
+          <span className="text-[9px] px-1 py-0.2 bg-amber-900/50 text-amber-300 rounded border border-amber-600/40 font-mono">REGISTRIES</span>
         </button>
 
         <button
@@ -422,9 +429,9 @@ export default function SherlockView({ onBackToEasm }) {
         </button>
       </div>
 
-      {/* 3. CONTENIDO SEGÚN LA PESTAÑA SELECCIONADA */}
+      {/* 3. ACTIVE TAB CONTENT */}
 
-      {/* PESTAÑA 1: USERNAME SOCMINT */}
+      {/* TAB 1: USERNAME SOCMINT */}
       {osintTab === 'username' && (
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Barra de Búsqueda y Filtros de Categoría */}
@@ -444,13 +451,13 @@ export default function SherlockView({ onBackToEasm }) {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Introduce un username / alias (ej. esskike, elonmusk, satoshi)..."
+                  placeholder="Enter username / alias (e.g. satoshi, elonmusk, torvalds)..."
                   disabled={isScanning}
                   className="w-full pl-8 pr-4 py-2 bg-[#090b10] border border-[#1e2638] focus:border-purple-500 focus:outline-none rounded text-sm text-slate-100 placeholder-slate-500 font-mono transition-colors"
                 />
               </div>
 
-              {/* Selector de categoría */}
+              {/* Category selector */}
               <div className="flex items-center gap-2">
                 <select
                   value={selectedCategory}
@@ -460,7 +467,7 @@ export default function SherlockView({ onBackToEasm }) {
                 >
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>
-                      {cat === 'España (ES)' ? '🇪🇸 España (ES)' : cat}
+                      {cat === 'España (ES)' || cat === 'Spain (ES)' ? '🇪🇸 Spain (ES)' : cat === 'Todos' ? 'All' : cat}
                     </option>
                   ))}
                 </select>
@@ -472,7 +479,7 @@ export default function SherlockView({ onBackToEasm }) {
                     className="px-4 py-2 bg-red-950/80 hover:bg-red-900 border border-red-700 text-red-200 rounded text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors cursor-pointer"
                   >
                     <Square size={14} className="fill-current" />
-                    <span>Detener</span>
+                    <span>Stop</span>
                   </button>
                 ) : (
                   <button
@@ -481,29 +488,29 @@ export default function SherlockView({ onBackToEasm }) {
                     className="px-5 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:hover:bg-purple-600 text-white rounded text-xs font-mono font-bold flex items-center space-x-1.5 transition-all shadow-md shadow-purple-900/30 cursor-pointer"
                   >
                     <Search size={14} />
-                    <span>Rastrear</span>
+                    <span>Track</span>
                   </button>
                 )}
               </div>
             </form>
 
-            {/* Barra de progreso interactiva */}
+            {/* Interactive progress bar */}
             {(isScanning || progress.checked > 0) && (
               <div className="max-w-4xl mx-auto mt-3 pt-3 border-t border-[#1e2638]/70">
                 <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-1.5">
                   <div className="flex items-center space-x-2">
                     <span className="text-purple-400 font-bold">
-                      {isScanning ? 'Escaneando en paralelo...' : 'Escaneo finalizado'}
+                      {isScanning ? 'Scanning in parallel...' : 'Scan completed'}
                     </span>
                     <span>·</span>
                     <span className="text-slate-300">
-                      {progress.checked} / {progress.total} plataformas
+                      {progress.checked} / {progress.total} platforms
                     </span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <span className="text-emerald-400 font-bold flex items-center space-x-1">
                       <CheckCircle2 size={13} />
-                      <span>{progress.found} encontrados</span>
+                      <span>{progress.found} found</span>
                     </span>
                     <span className="text-slate-500 flex items-center space-x-1">
                       <Clock size={12} />
@@ -521,7 +528,7 @@ export default function SherlockView({ onBackToEasm }) {
             )}
           </div>
 
-          {/* Área de Resultados de Sherlock */}
+          {/* Sherlock Results Area */}
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
             {errorMessage && (
               <div className="max-w-4xl mx-auto p-3 bg-red-950/40 border border-red-800 rounded text-red-300 text-xs flex items-center space-x-2 font-mono">
@@ -541,7 +548,7 @@ export default function SherlockView({ onBackToEasm }) {
                         : 'bg-[#0f172a] border-[#1e2638] text-slate-400 hover:text-white'
                     }`}
                   >
-                    Confirmados ({confirmedProfiles.length})
+                    Confirmed ({confirmedProfiles.length})
                   </button>
                   <button
                     onClick={() => setViewFilter('all')}
@@ -551,7 +558,7 @@ export default function SherlockView({ onBackToEasm }) {
                         : 'bg-[#0f172a] border-[#1e2638] text-slate-400 hover:text-white'
                     }`}
                   >
-                    Todos ({results.length})
+                    All ({results.length})
                   </button>
                 </div>
 
@@ -561,7 +568,7 @@ export default function SherlockView({ onBackToEasm }) {
                     type="text"
                     value={textSearch}
                     onChange={(e) => setTextSearch(e.target.value)}
-                    placeholder="Filtrar por nombre o categoría..."
+                    placeholder="Filter by name or category..."
                     className="w-full pl-8 pr-3 py-1 bg-[#0c1017] border border-[#1e2638] rounded text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500"
                   />
                 </div>
@@ -574,11 +581,10 @@ export default function SherlockView({ onBackToEasm }) {
                   <UserSearch size={22} />
                 </div>
                 <div className="font-mono text-sm text-slate-300 font-bold">
-                  SISTEMA LISTO PARA INVESTIGACIÓN SOCMINT
+                  SYSTEM READY FOR SOCMINT RECONNAISSANCE
                 </div>
                 <p className="text-xs font-mono text-slate-500 max-w-md mt-1 leading-relaxed">
-                  Introduce el nombre de usuario de la persona investigada para rastrear en paralelo
-                  más de {totalCatalogCount || 100} redes sociales, foros españoles, repositorios y plataformas de juego.
+                  Enter target username to scan in parallel across more than {totalCatalogCount || 100} social networks, Spanish forums, repositories, and gaming platforms.
                 </p>
               </div>
             ) : (
@@ -607,7 +613,7 @@ export default function SherlockView({ onBackToEasm }) {
                                 : 'bg-slate-900 text-slate-500 border-slate-800'
                             }`}
                           >
-                            {r.found ? 'CONFIRMADO' : 'NO DETECTADO'}
+                            {r.found ? 'CONFIRMED' : 'NOT DETECTED'}
                           </span>
                         </div>
 
@@ -625,7 +631,7 @@ export default function SherlockView({ onBackToEasm }) {
                           <button
                             type="button"
                             onClick={() => handleCopy(r.url)}
-                            title="Copiar URL del perfil"
+                            title="Copy profile URL"
                             className="p-1 rounded hover:bg-[#1a2333] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                           >
                             {isCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
@@ -634,10 +640,10 @@ export default function SherlockView({ onBackToEasm }) {
                             href={r.url}
                             target="_blank"
                             rel="noreferrer"
-                            title="Abrir perfil en una nueva pestaña"
+                            title="Open profile in a new tab"
                             className="p-1 rounded bg-[#1a2333] hover:bg-[#25334d] text-sky-400 hover:text-white transition-colors inline-flex items-center space-x-1 text-[11px]"
                           >
-                            <span>Abrir</span>
+                            <span>Open</span>
                             <ExternalLink size={11} />
                           </a>
                         </div>
@@ -651,38 +657,28 @@ export default function SherlockView({ onBackToEasm }) {
         </div>
       )}
 
-      {/* PESTAÑA 2: ESPAÑA OSINT HUB (UNISHKA GUIDE / CLARA RODRÍGUEZ CHIRINO) */}
+      {/* TAB 2: SPAIN OSINT HUB (OFFICIAL REGISTRIES & GAZETTES) */}
       {osintTab === 'spain' && (
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 space-y-5 max-w-5xl mx-auto w-full">
-          {/* Cabecera / Banner UNISHKA */}
+          {/* Header Banner */}
           <div className="bg-gradient-to-r from-amber-950/40 via-[#0d131f] to-amber-950/20 border border-amber-600/40 rounded p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-xl">🇪🇸</span>
                 <span className="font-mono font-bold text-amber-300 text-sm tracking-wide">
-                  CENTRO DE INVESTIGACIÓN OSINT // ESPAÑA
+                  OSINT RESEARCH HUB // SPAIN
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 bg-amber-900/60 text-amber-200 rounded border border-amber-500/50">
-                  METODOLOGÍA UNISHKA
+                  OFFICIAL PUBLIC REGISTRIES
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-sans mt-1 max-w-2xl leading-relaxed">
-                Herramientas y registros de transparencia basados en el estudio forense de <strong>Clara Rodríguez Chirino</strong> (UNISHKA Research).
-                Explora boletines oficiales, adjudicaciones públicas, sentencias judiciales del CENDOJ, catastro inmobiliario y registros mercantiles.
+                Investigative tools, public transparency portals, official gazettes, government procurement, CENDOJ judicial rulings, cadastre, and commercial registries in Spain.
               </p>
             </div>
-            <a
-              href="https://unishka.substack.com/p/osint-of-spain"
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-1.5 bg-[#141b29] hover:bg-amber-950/60 border border-amber-600/50 hover:border-amber-400 text-amber-300 rounded text-xs font-mono inline-flex items-center space-x-1.5 transition-colors shrink-0"
-            >
-              <span>Ver Guía UNISHKA</span>
-              <ExternalLink size={11} />
-            </a>
           </div>
 
-          {/* Buscador Contextual Español */}
+          {/* Contextual Spanish Search Bar */}
           <div className="bg-[#0c1017] border border-[#1e2638] rounded p-3 flex flex-col sm:flex-row gap-2 items-center">
             <div className="relative flex-1 w-full">
               <Search size={14} className="absolute left-3 top-3 text-slate-500" />
@@ -690,28 +686,28 @@ export default function SherlockView({ onBackToEasm }) {
                 type="text"
                 value={spainQuery}
                 onChange={(e) => setSpainQuery(e.target.value)}
-                placeholder="Escribe un Nombre, Apellidos, Razón Social, DNI/NIE o Matrícula..."
+                placeholder="Enter Full Name, Company Name, Tax ID (DNI/NIE/CIF) or License Plate..."
                 className="w-full pl-9 pr-3 py-2 bg-[#090b10] border border-[#1e2638] rounded text-sm font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
               />
             </div>
             <span className="text-xs text-slate-500 font-mono hidden sm:inline">
-              {spainQuery.trim() ? 'Consultas dinámicas armadas' : 'Escribe para autocompletar enlaces'}
+              {spainQuery.trim() ? 'Dynamic query links ready' : 'Type to autocomplete lookup links'}
             </span>
           </div>
 
-          {/* Grid de 4 Bloques Forenses */}
+          {/* Grid of 4 Forensic Blocks */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Bloque 1: Boletines Oficiales y Judicial */}
+            {/* Block 1: Official Gazettes & Judiciary */}
             <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
               <div className="flex items-center space-x-2 text-xs font-mono font-bold text-amber-300 uppercase">
                 <FileText size={15} className="text-amber-400" />
-                <span>1. Boletines Oficiales & Poder Judicial</span>
+                <span>1. Official Gazettes & Judiciary</span>
               </div>
               <div className="space-y-2 text-xs font-mono">
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
-                    <span className="text-slate-200 font-bold block">BOE (Boletín Oficial del Estado)</span>
-                    <span className="text-[10px] text-slate-500">Sanciones, nombramientos, edictos, subastas públicas e indultos</span>
+                    <span className="text-slate-200 font-bold block">BOE (State Official Gazette)</span>
+                    <span className="text-[10px] text-slate-500">Sanctions, appointments, edicts, public auctions and pardons</span>
                   </div>
                   <a
                     href={
@@ -723,15 +719,15 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-amber-900/60 text-amber-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>{spainQuery.trim() ? 'Buscar en BOE' : 'Abrir BOE'}</span>
+                    <span>{spainQuery.trim() ? 'Search BOE' : 'Open BOE'}</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
 
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
-                    <span className="text-slate-200 font-bold block">BORME (Boletín Registro Mercantil)</span>
-                    <span className="text-[10px] text-slate-500">Constitución de empresas, ceses y nombramientos de directores</span>
+                    <span className="text-slate-200 font-bold block">BORME (Commercial Registry Gazette)</span>
+                    <span className="text-[10px] text-slate-500">Company incorporations, director appointments and revocations</span>
                   </div>
                   <a
                     href={
@@ -743,15 +739,15 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-amber-900/60 text-amber-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>{spainQuery.trim() ? 'Buscar BORME' : 'Abrir BORME'}</span>
+                    <span>{spainQuery.trim() ? 'Search BORME' : 'Open BORME'}</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
 
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
-                    <span className="text-slate-200 font-bold block">CENDOJ (Poder Judicial)</span>
-                    <span className="text-[10px] text-slate-500">Buscador oficial de sentencias firmes del Tribunal Supremo y Audiencias</span>
+                    <span className="text-slate-200 font-bold block">CENDOJ (Judicial Power Case Law)</span>
+                    <span className="text-[10px] text-slate-500">Official case law repository for Supreme Court and regional courts</span>
                   </div>
                   <a
                     href="https://www.poderjudicial.es/search/indexAN.jsp"
@@ -759,24 +755,24 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-amber-900/60 text-amber-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>CENDOJ Sentencias</span>
+                    <span>CENDOJ Rulings</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
               </div>
             </div>
 
-            {/* Bloque 2: Contratación Pública & Entramados Societarios */}
+            {/* Block 2: Public Procurement & Corporate Networks */}
             <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
               <div className="flex items-center space-x-2 text-xs font-mono font-bold text-sky-300 uppercase">
                 <Building2 size={15} className="text-sky-400" />
-                <span>2. Contratación Pública & Empresas</span>
+                <span>2. Public Procurement & Corporate Networks</span>
               </div>
               <div className="space-y-2 text-xs font-mono">
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
-                    <span className="text-slate-200 font-bold block">PLACSP (Contratación del Estado)</span>
-                    <span className="text-[10px] text-slate-500">Licitaciones públicas, adjudicaciones a empresas e importes adjudicados</span>
+                    <span className="text-slate-200 font-bold block">PLACSP (State Procurement Platform)</span>
+                    <span className="text-[10px] text-slate-500">Public tenders, government vendor awards and contracted amounts</span>
                   </div>
                   <a
                     href="https://contrataciondelestado.es/wps/portal/licitaciones"
@@ -784,7 +780,7 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-sky-900/60 text-sky-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>PLACSP Licitaciones</span>
+                    <span>PLACSP Tenders</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
@@ -792,7 +788,7 @@ export default function SherlockView({ onBackToEasm }) {
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
                     <span className="text-slate-200 font-bold block">Datoscif / Infonif</span>
-                    <span className="text-[10px] text-slate-500">Estructura mercantil, administradores, CIF y vinculaciones entre sociedades</span>
+                    <span className="text-[10px] text-slate-500">Corporate structure, shareholders, CIF and cross-company links</span>
                   </div>
                   <a
                     href={
@@ -804,15 +800,15 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-sky-900/60 text-sky-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>{spainQuery.trim() ? 'Buscar CIF' : 'Datoscif'}</span>
+                    <span>{spainQuery.trim() ? 'Search CIF' : 'Datoscif'}</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
 
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
-                    <span className="text-slate-200 font-bold block">CNMV (Advertencias de Fraude)</span>
-                    <span className="text-[10px] text-slate-500">Buscador oficial de sociedades de inversión y chiringuitos financieros</span>
+                    <span className="text-slate-200 font-bold block">CNMV (Securities & Fraud Alerts)</span>
+                    <span className="text-[10px] text-slate-500">Official registry of investment firms and unauthorized boiler rooms</span>
                   </div>
                   <a
                     href="https://www.cnmv.es/portal/consultas/Busqueda.aspx"
@@ -820,24 +816,24 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-sky-900/60 text-sky-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>CNMV Registro</span>
+                    <span>CNMV Registry</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
               </div>
             </div>
 
-            {/* Bloque 3: Inmuebles, Territorio & Vehículos */}
+            {/* Block 3: Real Estate Cadastre & Vehicles */}
             <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
               <div className="flex items-center space-x-2 text-xs font-mono font-bold text-emerald-300 uppercase">
                 <MapPin size={15} className="text-emerald-400" />
-                <span>3. Catastro Inmobiliario & Vehículos</span>
+                <span>3. Real Estate Cadastre & Vehicles</span>
               </div>
               <div className="space-y-2 text-xs font-mono">
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
                     <span className="text-slate-200 font-bold block">Sede Electrónica del Catastro</span>
-                    <span className="text-[10px] text-slate-500">Búsqueda de parcelas, m², año de construcción e historial por referencia</span>
+                    <span className="text-[10px] text-slate-500">Cadastral reference parcel lookup, m², construction year and history</span>
                   </div>
                   <a
                     href="https://www.sedecatastro.gob.es"
@@ -845,15 +841,15 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-emerald-900/60 text-emerald-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>Sede Catastro</span>
+                    <span>Cadastre Portal</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
 
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
-                    <span className="text-slate-200 font-bold block">DGT (Distintivo & Matrícula)</span>
-                    <span className="text-[10px] text-slate-500">Comprobación pública de vehículo y distintivo ambiental por matrícula</span>
+                    <span className="text-slate-200 font-bold block">DGT (Vehicle & Environmental Badge)</span>
+                    <span className="text-[10px] text-slate-500">Public vehicle inspection and environmental sticker verification</span>
                   </div>
                   <a
                     href="https://sede.dgt.gob.es/es/vehiculos/distintivo-ambiental/"
@@ -861,7 +857,7 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-emerald-900/60 text-emerald-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>DGT Matrículas</span>
+                    <span>DGT License Plates</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
@@ -869,7 +865,7 @@ export default function SherlockView({ onBackToEasm }) {
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
                     <span className="text-slate-200 font-bold block">Colegio de Registradores (Propiedad)</span>
-                    <span className="text-[10px] text-slate-500">Solicitud oficial de notas simples de fincas e inmuebles inscritos</span>
+                    <span className="text-[10px] text-slate-500">Official land registry ownership reports and property records</span>
                   </div>
                   <a
                     href="https://geoportal.registradores.org"
@@ -877,24 +873,24 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-emerald-900/60 text-emerald-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>Geoportal Fincas</span>
+                    <span>Property Geoportal</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
               </div>
             </div>
 
-            {/* Bloque 4: Demografía e Identidad */}
+            {/* Block 4: Demographics & Identity */}
             <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
               <div className="flex items-center space-x-2 text-xs font-mono font-bold text-purple-300 uppercase">
                 <Globe size={15} className="text-purple-400" />
-                <span>4. Demografía, INE & Guías Telefónicas</span>
+                <span>4. Demographics, INE & Phone Directories</span>
               </div>
               <div className="space-y-2 text-xs font-mono">
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
-                    <span className="text-slate-200 font-bold block">INE (Distribución de Nombres y Apellidos)</span>
-                    <span className="text-[10px] text-slate-500">Frecuencia y mapa provincial exacto de cualquier nombre o apellido en España</span>
+                    <span className="text-slate-200 font-bold block">INE (First & Last Name Distribution)</span>
+                    <span className="text-[10px] text-slate-500">Frequency and exact provincial breakdown for any first or last name in Spain</span>
                   </div>
                   <a
                     href="https://www.ine.es/widgets/nombapell/index.shtml"
@@ -902,7 +898,7 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-purple-900/60 text-purple-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>Mapa INE</span>
+                    <span>INE Map</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
@@ -910,7 +906,7 @@ export default function SherlockView({ onBackToEasm }) {
                 <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                   <div>
                     <span className="text-slate-200 font-bold block">Páginas Blancas / Infobel España</span>
-                    <span className="text-[10px] text-slate-500">Guías telefónicas residenciales y comerciales en territorio español</span>
+                    <span className="text-[10px] text-slate-500">Residential and business telephone directories across Spain</span>
                   </div>
                   <a
                     href="https://www.paginasamarillas.es"
@@ -918,7 +914,7 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-2.5 py-1 bg-[#1a2333] hover:bg-purple-900/60 text-purple-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0"
                   >
-                    <span>Páginas Amarillas</span>
+                    <span>Yellow Pages</span>
                     <ExternalLink size={10} />
                   </a>
                 </div>
@@ -926,12 +922,12 @@ export default function SherlockView({ onBackToEasm }) {
             </div>
           </div>
 
-          {/* Bloque 5: Dorks Especializados de España (UNISHKA Style) */}
+          {/* Block 5: Specialized Google Dorks (Spain Public Registries) */}
           <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2 text-xs font-mono font-bold text-amber-300 uppercase">
                 <Search size={14} className="text-amber-400" />
-                <span>Google Hacking Dorks Especializados (España / UNISHKA)</span>
+                <span>Specialized Google Hacking Dorks (Spain Public Registries)</span>
               </div>
               {spainQuery && (
                 <span className="text-[11px] font-mono text-slate-400">
@@ -941,30 +937,30 @@ export default function SherlockView({ onBackToEasm }) {
             </div>
 
             {(() => {
-              const q = spainQuery.trim() || 'NOMBRE_O_EMPRESA';
+              const q = spainQuery.trim() || 'TARGET_NAME_OR_COMPANY';
               const dorks = [
                 {
-                  title: 'Apariciones en BOE & Resoluciones Oficiales',
+                  title: 'BOE Appearances & Official Resolutions',
                   dork: `site:boe.es "${q}"`,
                 },
                 {
-                  title: 'Contratos Públicos y Adjudicaciones Estatales',
+                  title: 'Public Contracts & State Awards',
                   dork: `site:contrataciondelestado.es "${q}"`,
                 },
                 {
-                  title: 'Base Nacional de Subvenciones (Hacienda)',
+                  title: 'National Subsidies Database (Treasury)',
                   dork: `site:pap.hacienda.gob.es/bdnstrans/ "${q}"`,
                 },
                 {
-                  title: 'Portal de la Transparencia y Declaraciones Públicas',
+                  title: 'Transparency Portal & Public Disclosures',
                   dork: `site:transparencia.gob.es filetype:pdf "${q}"`,
                 },
                 {
-                  title: 'Foros y Comunidades Españolas (Forocoches / Burbuja)',
+                  title: 'Spanish Forums & Communities (Forocoches / Burbuja)',
                   dork: `site:forocoches.com OR site:burbuja.info "${q}"`,
                 },
                 {
-                  title: 'Documentos Oficiales Administrativos (PDF)',
+                  title: 'Official Administrative Documents (PDF)',
                   dork: `site:es filetype:pdf ("resolución" OR "adjudicación") "${q}"`,
                 },
               ];
@@ -984,7 +980,7 @@ export default function SherlockView({ onBackToEasm }) {
                         <button
                           type="button"
                           onClick={() => handleCopy(d.dork)}
-                          title="Copiar Dork"
+                          title="Copy Dork"
                           className="px-2 py-1 bg-[#151c28] hover:bg-[#1e2638] text-slate-300 rounded text-[10px] transition-colors"
                         >
                           {copiedUrl === d.dork ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
@@ -995,7 +991,7 @@ export default function SherlockView({ onBackToEasm }) {
                           rel="noreferrer"
                           className="px-2 py-1 bg-[#1a2333] hover:bg-amber-900/60 text-amber-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
                         >
-                          <span>Lanzar</span>
+                          <span>Launch</span>
                           <ExternalLink size={9} />
                         </a>
                       </div>
@@ -1008,21 +1004,21 @@ export default function SherlockView({ onBackToEasm }) {
         </div>
       )}
 
-      {/* PESTAÑA 3: PHONE HUNTER (PHONEINFOGA STYLE) */}
+      {/* TAB 3: PHONE HUNTER (PHONEINFOGA STYLE) */}
       {osintTab === 'phone' && (
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 space-y-4 max-w-4xl mx-auto w-full">
-          {/* Formulario de búsqueda telefónica */}
+          {/* Phone Search Form */}
           <div className="bg-[#0c1017] border border-[#1e2638] rounded p-4">
             <div className="flex items-center space-x-2 text-xs font-mono font-bold text-emerald-400 uppercase mb-2">
               <Phone size={15} />
-              <span>Rastreo Telefónico de Inteligencia (PhoneInfoga Style)</span>
+              <span>Intelligence Phone Recon (PhoneInfoga Style)</span>
             </div>
             <form onSubmit={handlePhoneSearch} className="flex gap-2 items-center">
               <input
                 type="text"
                 value={phoneQuery}
                 onChange={(e) => setPhoneQuery(e.target.value)}
-                placeholder="Introduce un teléfono (ej. +34 612 34 56 78 o 912345678)..."
+                placeholder="Enter phone number (e.g. +34 612 34 56 78 or +1 415 555 2671)..."
                 disabled={phoneLoading}
                 className="flex-1 px-3 py-2 bg-[#090b10] border border-[#1e2638] rounded text-sm font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
@@ -1032,7 +1028,7 @@ export default function SherlockView({ onBackToEasm }) {
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors cursor-pointer shrink-0"
               >
                 {phoneLoading ? <RefreshCw size={13} className="animate-spin" /> : <Search size={13} />}
-                <span>{phoneLoading ? 'Analizando...' : 'Auditar Teléfono'}</span>
+                <span>{phoneLoading ? 'Analyzing...' : 'Audit Phone'}</span>
               </button>
             </form>
           </div>
@@ -1044,10 +1040,10 @@ export default function SherlockView({ onBackToEasm }) {
             </div>
           )}
 
-          {/* Resultados de Teléfono */}
+          {/* Phone Results */}
           {phoneData && (
             <div className="space-y-4">
-              {/* Tarjeta de Especificación Técnica E.164 */}
+              {/* Technical E.164 Specification Card */}
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
                 <div className="flex items-center justify-between border-b border-[#1e2638] pb-2">
                   <div className="flex items-center space-x-2">
@@ -1064,20 +1060,20 @@ export default function SherlockView({ onBackToEasm }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs font-mono">
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">País / Prefijo:</span>
+                    <span className="text-slate-500 block text-[10px]">Country / Prefix:</span>
                     <span className="text-slate-200 font-bold">{phoneData.country} ({phoneData.dial_code})</span>
                   </div>
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">Localización / Cobertura:</span>
+                    <span className="text-slate-500 block text-[10px]">Location / Coverage:</span>
                     <span className="text-slate-200 font-bold">{phoneData.location}</span>
                   </div>
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">Operador Asignado (CNMC):</span>
+                    <span className="text-slate-500 block text-[10px]">Assigned Carrier (CNMC):</span>
                     <span className="text-emerald-400 font-bold">{phoneData.operator_assigned}</span>
                   </div>
                 </div>
 
-                {/* Acciones de Mensajería Directa sin Guardar Contacto */}
+                {/* Direct Messaging Actions without Saving Contact */}
                 <div className="pt-2 border-t border-[#1e2638] flex flex-wrap gap-2">
                   <a
                     href={phoneData.direct_messaging.whatsapp_url}
@@ -1085,7 +1081,7 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-3 py-1.5 bg-[#064e3b] hover:bg-[#047857] text-[#a7f3d0] border border-[#10b981] rounded text-xs font-mono font-bold inline-flex items-center space-x-1.5 transition-colors"
                   >
-                    <span>💬 Abrir Chat en WhatsApp Web</span>
+                    <span>💬 Open Chat in WhatsApp Web</span>
                     <ExternalLink size={11} />
                   </a>
                   <a
@@ -1094,16 +1090,16 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-3 py-1.5 bg-[#0f2438] hover:bg-[#15344f] text-[#38bdf8] border border-[#0284c7] rounded text-xs font-mono font-bold inline-flex items-center space-x-1.5 transition-colors"
                   >
-                    <span>✈️ Abrir Perfil en Telegram</span>
+                    <span>✈️ Open Profile in Telegram</span>
                     <ExternalLink size={11} />
                   </a>
                 </div>
               </div>
 
-              {/* Reputación & Bases de Datos de SPAM */}
+              {/* Reputation & Phone SPAM Databases */}
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2">
                 <div className="text-xs font-mono font-bold text-slate-300 uppercase">
-                  Bases de Datos de Reputación, Denuncias & SPAM Telefónico
+                  Reputation, Complaint & Phone SPAM Databases
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono pt-1">
                   {phoneData.reputation_checks.map((rep, rIdx) => (
@@ -1121,7 +1117,7 @@ export default function SherlockView({ onBackToEasm }) {
                         rel="noreferrer"
                         className="px-2.5 py-1 bg-[#1a2333] hover:bg-[#28354f] text-slate-200 rounded text-[10px] inline-flex items-center space-x-1 transition-colors shrink-0"
                       >
-                        <span>Consultar</span>
+                        <span>Lookup</span>
                         <ExternalLink size={9} />
                       </a>
                     </div>
@@ -1129,10 +1125,10 @@ export default function SherlockView({ onBackToEasm }) {
                 </div>
               </div>
 
-              {/* Dorks PhoneInfoga */}
+              {/* PhoneInfoga Dorks */}
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2">
                 <div className="text-xs font-mono font-bold text-emerald-400 uppercase">
-                  PhoneInfoga Google Dorks (Huella Digital del Número)
+                  PhoneInfoga Google Dorks (Number Footprint)
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono pt-1">
                   {phoneData.phoneinfoga_dorks.map((d, dIdx) => (
@@ -1148,7 +1144,7 @@ export default function SherlockView({ onBackToEasm }) {
                         <button
                           type="button"
                           onClick={() => handleCopy(d.dork)}
-                          title="Copiar Dork"
+                          title="Copy Dork"
                           className="px-2 py-1 bg-[#151c28] hover:bg-[#1e2638] text-slate-300 rounded text-[10px] transition-colors"
                         >
                           {copiedUrl === d.dork ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
@@ -1159,7 +1155,7 @@ export default function SherlockView({ onBackToEasm }) {
                           rel="noreferrer"
                           className="px-2 py-1 bg-[#1a2333] hover:bg-emerald-900/60 text-emerald-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
                         >
-                          <span>Lanzar</span>
+                          <span>Launch</span>
                           <ExternalLink size={9} />
                         </a>
                       </div>
@@ -1172,21 +1168,21 @@ export default function SherlockView({ onBackToEasm }) {
         </div>
       )}
 
-      {/* PESTAÑA 4: EMAIL HUNTER (EPIEOS STYLE) */}
+      {/* TAB 4: EMAIL HUNTER (EPIEOS STYLE) */}
       {osintTab === 'email' && (
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 space-y-4 max-w-4xl mx-auto w-full">
-          {/* Formulario de búsqueda de email */}
+          {/* Email Search Form */}
           <div className="bg-[#0c1017] border border-[#1e2638] rounded p-4">
             <div className="flex items-center space-x-2 text-xs font-mono font-bold text-sky-400 uppercase mb-2">
               <Mail size={15} />
-              <span>Rastreo Forense de Correo Electrónico (Epieos Style)</span>
+              <span>Forensic Email Recon (Epieos Style)</span>
             </div>
             <form onSubmit={handleEmailSearch} className="flex gap-2 items-center">
               <input
                 type="email"
                 value={emailQuery}
                 onChange={(e) => setEmailQuery(e.target.value)}
-                placeholder="Introduce una dirección de correo (ej. objetivo@empresa.com)..."
+                placeholder="Enter email address (e.g. target@company.com)..."
                 disabled={emailLoading}
                 className="flex-1 px-3 py-2 bg-[#090b10] border border-[#1e2638] rounded text-sm font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500"
               />
@@ -1196,7 +1192,7 @@ export default function SherlockView({ onBackToEasm }) {
                 className="px-5 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors cursor-pointer shrink-0"
               >
                 {emailLoading ? <RefreshCw size={13} className="animate-spin" /> : <Search size={13} />}
-                <span>{emailLoading ? 'Verificando...' : 'Auditar Email'}</span>
+                <span>{emailLoading ? 'Verifying...' : 'Audit Email'}</span>
               </button>
             </form>
           </div>
@@ -1208,10 +1204,10 @@ export default function SherlockView({ onBackToEasm }) {
             </div>
           )}
 
-          {/* Resultados de Email */}
+          {/* Email Results */}
           {emailData && (
             <div className="space-y-4">
-              {/* Tarjeta de Resumen & Verificación de Dominio */}
+              {/* Summary & Domain Verification Card */}
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
                 <div className="flex items-center justify-between border-b border-[#1e2638] pb-2">
                   <div className="flex items-center space-x-2">
@@ -1225,41 +1221,41 @@ export default function SherlockView({ onBackToEasm }) {
                     {emailData.is_disposable ? (
                       <span className="px-2 py-0.5 bg-red-950 text-red-300 border border-red-700 text-[10px] font-mono font-bold rounded flex items-center space-x-1">
                         <AlertTriangle size={10} />
-                        <span>CORREO TEMPORAL / DESECHABLE</span>
+                        <span>DISPOSABLE / TEMPORARY EMAIL</span>
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-700 text-[10px] font-mono font-bold rounded">
-                        PROVEEDOR VÁLIDO / ESTÁNDAR
+                        VALID / STANDARD PROVIDER
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Parámetros DNS de correo */}
+                {/* Email DNS Parameters */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono">
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">Registros MX (Buzón Activo):</span>
+                    <span className="text-slate-500 block text-[10px]">MX Records (Active Mailbox):</span>
                     <span className={emailData.dns.mx_active ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
-                      {emailData.dns.mx_active ? 'Activo (Recibe correo)' : 'Sin registros MX'}
+                      {emailData.dns.mx_active ? 'Active (Accepts incoming mail)' : 'No MX records found'}
                     </span>
                   </div>
 
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">Registro SPF (Antispoofing):</span>
+                    <span className="text-slate-500 block text-[10px]">SPF Record (Antispoofing):</span>
                     <span className={emailData.dns.has_spf ? 'text-sky-400 font-bold' : 'text-amber-400 font-bold'}>
-                      {emailData.dns.has_spf ? 'Configurado' : 'No detectado'}
+                      {emailData.dns.has_spf ? 'Configured' : 'Not detected'}
                     </span>
                   </div>
 
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">Política DMARC:</span>
+                    <span className="text-slate-500 block text-[10px]">DMARC Policy:</span>
                     <span className="text-purple-400 font-bold uppercase">
-                      {emailData.dns.dmarc_policy ? `p=${emailData.dns.dmarc_policy}` : 'Sin política DMARC'}
+                      {emailData.dns.dmarc_policy ? `p=${emailData.dns.dmarc_policy}` : 'No DMARC policy'}
                     </span>
                   </div>
                 </div>
 
-                {/* Perfil Gravatar Detectado */}
+                {/* Detected Gravatar Profile */}
                 {emailData.gravatar?.found && (
                   <div className="p-3 bg-[#061e2d] border border-sky-500/50 rounded flex items-center space-x-3 mt-2">
                     {emailData.gravatar.avatar_url && (
@@ -1271,7 +1267,7 @@ export default function SherlockView({ onBackToEasm }) {
                     )}
                     <div className="text-xs font-mono">
                       <div className="text-sky-300 font-bold flex items-center space-x-1.5">
-                        <span>Perfil Gravatar Detectado</span>
+                        <span>Gravatar Profile Detected</span>
                         <CheckCircle2 size={13} className="text-emerald-400" />
                       </div>
                       {emailData.gravatar.display_name && (
@@ -1281,7 +1277,7 @@ export default function SherlockView({ onBackToEasm }) {
                       )}
                       {emailData.gravatar.location && (
                         <div className="text-slate-400 text-[10px]">
-                          Ubicación: {emailData.gravatar.location}
+                          Location: {emailData.gravatar.location}
                         </div>
                       )}
                     </div>
@@ -1289,10 +1285,10 @@ export default function SherlockView({ onBackToEasm }) {
                 )}
               </div>
 
-              {/* Plataformas de Investigación Externa (Epieos, HIBP, IntelX) */}
+              {/* Account Analysis & Breach Databases (Epieos, HIBP, IntelX) */}
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2">
                 <div className="text-xs font-mono font-bold text-slate-300 uppercase">
-                  Plataformas de Análisis de Cuenta & Fugas (Epieos / Breaches)
+                  Account Analysis & Breach Databases (Epieos / Breaches)
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono pt-1">
                   {emailData.investigation_links.map((link, lIdx) => (
@@ -1315,7 +1311,7 @@ export default function SherlockView({ onBackToEasm }) {
                         rel="noreferrer"
                         className="px-2.5 py-1 bg-[#1a2333] hover:bg-[#28354f] text-sky-400 hover:text-white rounded text-[10px] inline-flex items-center space-x-1 transition-colors shrink-0"
                       >
-                        <span>Investigar</span>
+                        <span>Investigate</span>
                         <ExternalLink size={9} />
                       </a>
                     </div>
@@ -1323,10 +1319,10 @@ export default function SherlockView({ onBackToEasm }) {
                 </div>
               </div>
 
-              {/* Dorks de Correo Electrónico */}
+              {/* Email Dorks */}
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2">
                 <div className="text-xs font-mono font-bold text-sky-400 uppercase">
-                  Google Hacking Dorks (Huella del Correo & Fugas)
+                  Google Hacking Dorks (Email Footprint & Leaks)
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono pt-1">
                   {emailData.email_dorks.map((d, dIdx) => (
@@ -1342,7 +1338,7 @@ export default function SherlockView({ onBackToEasm }) {
                         <button
                           type="button"
                           onClick={() => handleCopy(d.dork)}
-                          title="Copiar Dork"
+                          title="Copy Dork"
                           className="px-2 py-1 bg-[#151c28] hover:bg-[#1e2638] text-slate-300 rounded text-[10px] transition-colors"
                         >
                           {copiedUrl === d.dork ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
@@ -1353,7 +1349,7 @@ export default function SherlockView({ onBackToEasm }) {
                           rel="noreferrer"
                           className="px-2 py-1 bg-[#1a2333] hover:bg-sky-900/60 text-sky-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
                         >
-                          <span>Lanzar</span>
+                          <span>Launch</span>
                           <ExternalLink size={9} />
                         </a>
                       </div>

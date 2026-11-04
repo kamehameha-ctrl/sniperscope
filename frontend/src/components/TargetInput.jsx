@@ -29,14 +29,14 @@ export default function TargetInput({ onScan, isLoading, activeTarget, scanMode 
               type="text"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              placeholder="Dominio, URL o dirección IP objetivo (ej: scanme.nmap.org, 1.1.1.1)..."
+              placeholder="Target domain, URL, or IPv4/IPv6 (e.g. scanme.nmap.org, 1.1.1.1)..."
               disabled={isLoading}
               className="w-full bg-[#07090e] border border-[#1e2638] focus:border-[#38bdf8] focus:outline-none text-slate-100 text-sm font-mono px-3.5 py-2 pr-11 rounded transition-all placeholder:text-slate-600"
             />
             <button
               type="submit"
               disabled={isLoading || !target.trim()}
-              title="Iniciar reconocimiento y auditoría OSINT"
+              title="Launch OSINT reconnaissance and attack surface scan"
               className="absolute right-1.5 p-1.5 bg-[#1e2638] hover:bg-[#0284c7] disabled:opacity-40 text-slate-100 rounded transition-colors flex items-center justify-center cursor-pointer"
             >
               {isLoading ? (
@@ -48,12 +48,12 @@ export default function TargetInput({ onScan, isLoading, activeTarget, scanMode 
           </div>
         </form>
 
-        {/* Conmutador de Modo OPSEC: Stealth (Pasivo) vs Activo (Autorizado) */}
+        {/* OPSEC Mode Switcher: Stealth (Passive) vs Active (Authorized) */}
         <div className="flex items-center bg-[#07090e] border border-[#1e2638] p-0.5 rounded font-mono text-[11px] shrink-0">
           <button
             type="button"
             onClick={() => onChangeScanMode && onChangeScanMode('passive')}
-            title="Modo Stealth (100% seguro para tu IP: sin sondeo de /.env ni /.git/HEAD y con User-Agent de navegador)"
+            title="Stealth Mode (100% passive: zero sensitive probing, zero port probing, standard Chrome User-Agent)"
             className={`px-2.5 py-1.5 rounded flex items-center space-x-1.5 transition-colors cursor-pointer ${
               scanMode === 'passive'
                 ? 'bg-[#064e3b] text-[#a7f3d0] border border-[#10b981]/50 font-bold'
@@ -61,12 +61,12 @@ export default function TargetInput({ onScan, isLoading, activeTarget, scanMode 
             }`}
           >
             <Shield size={12} className={scanMode === 'passive' ? 'text-[#10b981]' : 'text-slate-500'} />
-            <span>Stealth (Pasivo)</span>
+            <span>Stealth (Passive)</span>
           </button>
           <button
             type="button"
             onClick={() => onChangeScanMode && onChangeScanMode('active')}
-            title="Modo Activo (Solo bajo autorización: sondea rutas sensibles /.env, /.git/HEAD, /swagger.json)"
+            title="Active Mode (Authorized only: probes sensitive paths, CORS, and performs port banner grabbing)"
             className={`px-2.5 py-1.5 rounded flex items-center space-x-1.5 transition-colors cursor-pointer ${
               scanMode === 'active'
                 ? 'bg-[#431407] text-[#fed7aa] border border-[#fb923c]/50 font-bold'
@@ -74,14 +74,14 @@ export default function TargetInput({ onScan, isLoading, activeTarget, scanMode 
             }`}
           >
             <Zap size={12} className={scanMode === 'active' ? 'text-[#fb923c]' : 'text-slate-500'} />
-            <span>Activo (Rutas)</span>
+            <span>Active (Deep Audit)</span>
           </button>
         </div>
       </div>
 
-      {/* Objetivos de prueba rápida */}
+      {/* Quick sample targets */}
       <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 shrink-0">
-        <span className="text-[11px] uppercase tracking-wider text-slate-600">Muestras:</span>
+        <span className="text-[11px] uppercase tracking-wider text-slate-600">Samples:</span>
         <button
           type="button"
           onClick={() => handleQuickTarget('scanme.nmap.org')}

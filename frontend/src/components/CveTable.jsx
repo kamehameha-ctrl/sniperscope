@@ -21,7 +21,7 @@ export default function CveTable({ vulnerabilities, onSelectCve }) {
       >
         <div className="flex items-center space-x-2 text-xs font-mono">
           <ShieldAlert size={14} className="text-[#ef4444]" />
-          <span className="font-semibold text-slate-200">Matriz de Vulnerabilidades Descubiertas</span>
+          <span className="font-semibold text-slate-200">Discovered Vulnerability Matrix</span>
           <span className="px-2 py-0.5 text-[10px] bg-[#2a1317] border border-[#7f1d1d] text-[#f87171] rounded-full">
             {vulnerabilities.length} CVEs
           </span>
@@ -38,7 +38,7 @@ export default function CveTable({ vulnerabilities, onSelectCve }) {
               type="text"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filtrar por código CVE (ej: CVE-2023)..."
+              placeholder="Filter by CVE identifier (e.g. CVE-2023)..."
               className="w-full max-w-xs bg-[#07090e] border border-[#1e2638] px-3 py-1.5 text-slate-200 rounded text-xs focus:outline-none focus:border-[#ef4444]"
             />
           </div>
@@ -46,9 +46,9 @@ export default function CveTable({ vulnerabilities, onSelectCve }) {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#1e2638] text-slate-500 text-[11px] uppercase">
-                <th className="py-2 px-3">Identificador CVE</th>
-                <th className="py-2 px-3">Acción en Grafo</th>
-                <th className="py-2 px-3 text-right">Referencia NIST</th>
+                <th className="py-2 px-3">CVE Identifier</th>
+                <th className="py-2 px-3">Graph Focus</th>
+                <th className="py-2 px-3 text-right">NIST Reference</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1e2638]/50 text-slate-300">
@@ -60,9 +60,9 @@ export default function CveTable({ vulnerabilities, onSelectCve }) {
                   <td className="py-2 px-3">
                     <button
                       onClick={() => onSelectCve(`cve_${item.cve}`)}
-                      className="text-[#38bdf8] hover:underline"
+                      className="text-[#38bdf8] hover:underline cursor-pointer"
                     >
-                      Enfocar en grafo
+                      Focus in Graph
                     </button>
                   </td>
                   <td className="py-2 px-3 text-right">

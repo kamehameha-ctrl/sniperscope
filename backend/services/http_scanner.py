@@ -14,12 +14,12 @@ from services.sca_scanner import enrich_wappalyzer_components
 
 
 SECURITY_HEADERS_SPEC = [
-    ("Strict-Transport-Security", "HSTS (Fuerza conexiones HTTPS cifradas)"),
-    ("Content-Security-Policy", "CSP (Mitiga ataques XSS e inyección de código)"),
-    ("X-Frame-Options", "Protección contra Clickjacking (iframes)"),
-    ("X-Content-Type-Options", "Previene ataques de MIME-sniffing"),
-    ("Referrer-Policy", "Control de filtración de cabeceras Referer"),
-    ("Permissions-Policy", "Restricción de APIs sensibles del navegador"),
+    ("Strict-Transport-Security", "HSTS (Enforces encrypted HTTPS connections)"),
+    ("Content-Security-Policy", "CSP (Mitigates XSS and data injection attacks)"),
+    ("X-Frame-Options", "Clickjacking protection (frame/iframe restrictions)"),
+    ("X-Content-Type-Options", "Prevents MIME-sniffing attacks"),
+    ("Referrer-Policy", "Controls Referer header leakage"),
+    ("Permissions-Policy", "Restricts sensitive browser APIs and hardware features"),
 ]
 
 STANDARD_BROWSER_UA = (
@@ -252,7 +252,7 @@ def _detect_wappalyzer_technologies(
         website: str = "",
         version_status: str = "verified",
         detection_mode: str = "stealth",
-        provenance: str = "Análisis Pasivo"
+        provenance: str = "Passive Analysis"
     ):
         if name not in tech_map or (version and not tech_map[name].get("version")):
             tech_map[name] = {
@@ -266,14 +266,14 @@ def _detect_wappalyzer_technologies(
                 "website": website,
             }
 
-    # 1. Frameworks Web & SSG
+    # 1. Web Frameworks & SSG
     if re.search(r'data-astro-cid|/_astro/|content=["\']Astro\b', body, re.I) or "astro" in generator.lower():
         v_match = re.search(r"Astro\s*v?([\d\.]+)", generator, re.I)
         if v_match:
             add_tech(
                 "Astro", "Web Framework / SSG",
                 v_match.group(1),
-                "Framework web moderno orientado a contenido y sitios estáticos ultrarrápidos con arquitectura de islas",
+                "Modern content-focused web framework with islands architecture for fast static sites",
                 "https://astro.build",
                 version_status="verified",
                 detection_mode="stealth",
@@ -283,11 +283,11 @@ def _detect_wappalyzer_technologies(
             add_tech(
                 "Astro", "Web Framework / SSG",
                 "v4.x (Zero-JS SSG)",
-                "Generador de sitios estáticos Astro moderno con arquitectura de islas y CSS scoping compilado (Zero-JS en cliente).",
+                "Modern Astro static site generator with islands architecture and scoped CSS (Zero-JS client).",
                 "https://astro.build",
                 version_status="architecture",
                 detection_mode="stealth",
-                provenance="Atributos DOM data-astro-cid & Assets /_astro/"
+                provenance="DOM attributes data-astro-cid & /_astro/ assets"
             )
 
     if re.search(r'/_next/static/|<div id=["\']__next["\']', body, re.I):
@@ -295,44 +295,44 @@ def _detect_wappalyzer_technologies(
         add_tech(
             "Next.js", "Web Framework",
             v_match.group(1) if v_match else None,
-            "Framework full-stack de React con renderizado híbrido SSR/SSG y optimización en producción",
+            "Full-stack React framework with hybrid SSR/SSG rendering and production optimizations",
             "https://nextjs.org",
             version_status="verified" if v_match else "detected",
             detection_mode="stealth",
-            provenance="Rutas estáticas /_next/"
+            provenance="Static routes /_next/"
         )
 
     if re.search(r'__nuxt|/_nuxt/|<div id=["\']__nuxt["\']', body, re.I):
         add_tech(
             "Nuxt.js", "Web Framework",
             None,
-            "Framework intuitivo de Vue.js para aplicaciones universales y renderizado del lado del servidor",
+            "Intuitive Vue.js framework for universal applications and server-side rendering",
             "https://nuxt.com",
             version_status="detected",
             detection_mode="stealth",
-            provenance="Marcadores DOM __nuxt"
+            provenance="DOM markers __nuxt"
         )
 
     if re.search(r'data-reactroot|_reactFiber|\breact-dom\b|\b_react\b', body):
         add_tech(
             "React", "JavaScript UI Library",
             None,
-            "Librería líder para construcción de interfaces de usuario interactivas basadas en componentes",
+            "Leading JavaScript library for building component-based interactive user interfaces",
             "https://react.dev",
             version_status="detected",
             detection_mode="stealth",
-            provenance="Marcadores react en DOM"
+            provenance="React DOM markers"
         )
 
     if re.search(r'data-v-[a-f0-9]{6,10}|vue\.runtime|vue\.global', body, re.I):
         add_tech(
             "Vue.js", "JavaScript Framework",
             None,
-            "Framework progresivo para desarrollo de interfaces web reactivas y modulares",
+            "Progressive JavaScript framework for building reactive and modular user interfaces",
             "https://vuejs.org",
             version_status="detected",
             detection_mode="stealth",
-            provenance="Atributos data-v-* en DOM"
+            provenance="DOM attributes data-v-*"
         )
 
     if re.search(r'ng-version=["\']([^"\']+)["\']|<app-root\b', body):
@@ -340,46 +340,46 @@ def _detect_wappalyzer_technologies(
         add_tech(
             "Angular", "JavaScript Framework",
             v_match.group(1) if v_match else None,
-            "Plataforma de desarrollo empresarial para aplicaciones web SPA ricas y estructuradas",
+            "Enterprise development platform for structured single-page applications",
             "https://angular.io",
             version_status="verified" if v_match else "detected",
             detection_mode="stealth",
-            provenance="Atributo DOM ng-version"
+            provenance="DOM attribute ng-version"
         )
 
     if re.search(r'class=["\'][^"\']*svelte-[a-z0-9]+|__sveltekit', body):
         add_tech(
             "Svelte", "JavaScript Framework",
             None,
-            "Compilador de componentes reactivos sin sobrecarga de Virtual DOM en tiempo de ejecución",
+            "Reactive component compiler with zero Virtual DOM runtime overhead",
             "https://svelte.dev",
             version_status="detected",
             detection_mode="stealth",
-            provenance="Clases CSS svelte-*"
+            provenance="CSS classes svelte-*"
         )
 
-    # 2. Servidores Web & Proxies Inversos
+    # 2. Web Servers & Reverse Proxies
     if "nginx" in server_val.lower():
         v_match = re.search(r"nginx/([\d\.]+)", server_val, re.I)
         if v_match:
             add_tech(
                 "Nginx", "Web Server",
                 v_match.group(1),
-                "Servidor web HTTP y proxy inverso de alto rendimiento y bajo consumo de memoria",
+                "High-performance HTTP web server and reverse proxy with low memory footprint",
                 "https://nginx.org",
                 version_status="verified",
                 detection_mode="stealth",
-                provenance="Cabecera HTTP Server"
+                provenance="HTTP Server Header"
             )
         else:
             add_tech(
                 "Nginx", "Web Server",
-                "Oculta (server_tokens off)",
-                "Servidor web Nginx con directiva de seguridad defensiva 'server_tokens off' activa que suprime la versión en cabeceras y respuestas de error.",
+                "Hidden (server_tokens off)",
+                "Nginx web server with defensive 'server_tokens off' directive active, suppressing version strings in headers and error pages.",
                 "https://nginx.org",
                 version_status="hardened",
                 detection_mode="stealth",
-                provenance="Cabecera HTTP Server (Hardened)"
+                provenance="HTTP Server Header (Hardened)"
             )
     if "apache" in server_val.lower():
         v_match = re.search(r"apache/([\d\.]+)", server_val, re.I)
@@ -387,34 +387,34 @@ def _detect_wappalyzer_technologies(
             add_tech(
                 "Apache HTTP Server", "Web Server",
                 v_match.group(1),
-                "Servidor web HTTP modular y robusto de la Apache Software Foundation",
+                "Modular and robust HTTP web server from the Apache Software Foundation",
                 "https://httpd.apache.org",
                 version_status="verified",
                 detection_mode="stealth",
-                provenance="Cabecera HTTP Server"
+                provenance="HTTP Server Header"
             )
         else:
             add_tech(
                 "Apache HTTP Server", "Web Server",
-                "Oculta (ServerTokens Prod)",
-                "Servidor web Apache con directiva 'ServerTokens Prod' que suprime el número de versión en las cabeceras HTTP.",
+                "Hidden (ServerTokens Prod)",
+                "Apache web server with 'ServerTokens Prod' directive active, suppressing version numbers in HTTP headers.",
                 "https://httpd.apache.org",
                 version_status="hardened",
                 detection_mode="stealth",
-                provenance="Cabecera HTTP Server (Hardened)"
+                provenance="HTTP Server Header (Hardened)"
             )
     if "litespeed" in server_val.lower():
         add_tech(
             "LiteSpeed", "Web Server",
             None,
-            "Servidor web propietario optimizado para alta concurrencia y aceleración de PHP",
+            "Proprietary web server optimized for high concurrency and PHP acceleration",
             "https://www.litespeedtech.com"
         )
     if "caddy" in server_val.lower():
         add_tech(
             "Caddy", "Web Server",
             None,
-            "Servidor web moderno programado en Go con gestión automática de certificados HTTPS",
+            "Modern Go-based web server with automatic HTTPS certificate management",
             "https://caddyserver.com"
         )
     if "microsoft-iis" in server_val.lower() or "iis" in server_val.lower():
@@ -422,48 +422,48 @@ def _detect_wappalyzer_technologies(
         add_tech(
             "Microsoft IIS", "Web Server",
             v_match.group(1) if v_match else None,
-            "Servidor de aplicaciones web para entornos Windows Server",
+            "Web application server for Windows Server environments",
             "https://www.iis.net"
         )
 
-    # 3. WAF / CDN / Aceleración de Red
+    # 3. WAF / CDN / Network Acceleration
     if "cf-ray" in h_lower or "cloudflare" in server_val.lower():
         add_tech(
             "Cloudflare", "CDN / WAF",
             None,
-            "Red global de entrega de contenidos, proxy inverso y mitigación de ataques DDoS/WAF",
+            "Global content delivery network, reverse proxy, and DDoS/WAF mitigation platform",
             "https://www.cloudflare.com"
         )
     if "x-amz-cf-id" in h_lower or "cloudfront" in server_val.lower():
         add_tech(
             "AWS CloudFront", "CDN",
             None,
-            "Red de distribución de contenidos segura y de alta velocidad de Amazon Web Services",
+            "Secure, high-speed content delivery network from Amazon Web Services",
             "https://aws.amazon.com/cloudfront"
         )
     if "x-fastly-request-id" in h_lower:
         add_tech(
             "Fastly", "CDN / Edge Cloud",
             None,
-            "Plataforma de computación edge y CDN programable de alta velocidad",
+            "High-speed edge cloud computing platform and programmable CDN",
             "https://www.fastly.com"
         )
     if "x-vercel-id" in h_lower or "vercel" in server_val.lower():
         add_tech(
             "Vercel", "Hosting / PaaS",
             None,
-            "Plataforma de despliegue en la nube para aplicaciones frontend y funciones serverless",
+            "Cloud deployment platform for frontend applications and serverless functions",
             "https://vercel.com"
         )
     if "x-sucuri-id" in h_lower or "sucuri" in server_val.lower():
         add_tech(
             "Sucuri CloudProxy", "WAF",
             None,
-            "Cortafuegos de aplicaciones web y limpieza de malware para sitios web",
+            "Web application firewall and malware cleanup service",
             "https://sucuri.net"
         )
 
-    # 4. CMS & Plataformas de Comercio
+    # 4. CMS & Ecommerce Platforms
     if re.search(r'wp-content/|wp-includes/|content=["\']WordPress\b', body, re.I) or "wordpress" in generator.lower():
         v_match = re.search(r"WordPress\s*([\d\.]+)", generator, re.I)
         if not v_match:
@@ -473,7 +473,7 @@ def _detect_wappalyzer_technologies(
         add_tech(
             "WordPress", "CMS",
             v_match.group(1) if v_match else None,
-            "El sistema de gestión de contenidos (CMS) de código abierto más popular del mundo",
+            "The world's most popular open-source content management system (CMS)",
             "https://wordpress.org"
         )
     if re.search(r'\bwoocommerce\b', body, re.I):
@@ -481,7 +481,7 @@ def _detect_wappalyzer_technologies(
         add_tech(
             "WooCommerce", "Ecommerce",
             v_match.group(1) if v_match else None,
-            "Plataforma de comercio electrónico flexible y personalizable para WordPress",
+            "Flexible, customizable open-source ecommerce platform for WordPress",
             "https://woocommerce.com"
         )
     if re.search(r'Drupal\.settings|content=["\']Drupal\b', body, re.I) or "drupal" in generator.lower():
@@ -489,7 +489,7 @@ def _detect_wappalyzer_technologies(
         add_tech(
             "Drupal", "CMS",
             v_match.group(1) if v_match else None,
-            "CMS modular orientado a portales de gran volumen y estructuras de datos complejas",
+            "Modular CMS designed for high-traffic enterprise portals and complex content architectures",
             "https://www.drupal.org"
         )
     if re.search(r'content=["\']Joomla!\b', body, re.I) or "joomla" in generator.lower():
@@ -497,30 +497,30 @@ def _detect_wappalyzer_technologies(
         add_tech(
             "Joomla", "CMS",
             v_match.group(1) if v_match else None,
-            "Sistema de gestión de contenidos para sitios web corporativos y publicaciones online",
+            "Content management system for corporate websites and online publishing",
             "https://www.joomla.org"
         )
     if re.search(r'cdn\.shopify\.com|Shopify\.theme', body, re.I):
         add_tech(
             "Shopify", "Ecommerce",
             None,
-            "Plataforma líder de comercio electrónico en la nube para tiendas online",
+            "Leading cloud commerce platform for multi-channel online retail",
             "https://www.shopify.com"
         )
     if re.search(r'prestashop|PrestaShop', body):
         add_tech(
             "PrestaShop", "Ecommerce",
             None,
-            "Solución de comercio electrónico de código abierto para tiendas profesionales",
+            "Open-source ecommerce solution for professional online stores",
             "https://prestashop.com"
         )
 
-    # 5. Frameworks CSS
+    # 5. CSS Frameworks
     if re.search(r'class=["\'][^"\']*\b(flex|grid|hidden|inline-flex|justify-between|items-center|px-[0-9]|py-[0-9]|bg-[a-z0-9-]+|text-[a-z0-9-]+)\b[^"\']*["\']', body):
         add_tech(
             "Tailwind CSS", "CSS Framework",
             None,
-            "Framework CSS utilitario de bajo nivel para composición rápida de interfaces a medida",
+            "Utility-first CSS framework for rapid custom UI composition",
             "https://tailwindcss.com"
         )
     if re.search(r'bootstrap(?:\.min)?\.css|\b(container-fluid|navbar-expand|col-md-[0-9]+|btn-primary)\b', body):
@@ -528,54 +528,54 @@ def _detect_wappalyzer_technologies(
         add_tech(
             "Bootstrap", "CSS Framework",
             v_match.group(1) if v_match else None,
-            "Framework de maquetación responsive con componentes CSS y utilidades prediseñadas",
+            "Responsive design framework with prebuilt UI components and utilities",
             "https://getbootstrap.com"
         )
 
-    # 6. Librerías JavaScript
+    # 6. JavaScript Libraries
     if re.search(r'jquery(?:[.-][\d\.]+)?(?:\.min)?\.js|\bjQuery\b', body, re.I):
         v_match = re.search(r"jquery[.-]([\d\.]+)(?:\.min)?\.js|jQuery\s*v([\d\.]+)|/\*!\s*jQuery\s*v([\d\.]+)", body, re.I)
         ver = (v_match.group(1) or v_match.group(2) or v_match.group(3)) if v_match else None
         add_tech(
             "jQuery", "JavaScript Library",
             ver,
-            "Librería JavaScript clásica rápida y ligera para manipulación de documentos HTML",
+            "Classic fast and lightweight JavaScript DOM manipulation library",
             "https://jquery.com"
         )
     if re.search(r'\bx-data=|\bx-show=|\balpinejs\b', body):
         add_tech(
             "Alpine.js", "JavaScript Library",
             None,
-            "Herramienta robusta y minimalista para componer reactividad declarativa directamente en el DOM",
+            "Rugged, minimal tool for composing declarative reactivity directly in HTML markup",
             "https://alpinejs.dev"
         )
     if re.search(r'\bhx-get=|\bhx-post=|\bhtmx\.org\b', body):
         add_tech(
             "HTMX", "JavaScript Library",
             None,
-            "Extensión moderna del HTML para permitir transiciones AJAX y SSE mediante atributos declarativos",
+            "Modern HTML extension enabling AJAX, CSS Transitions, WebSockets and SSE via HTML attributes",
             "https://htmx.org"
         )
     if re.search(r'lodash(?:\.min)?\.js', body, re.I):
-        add_tech("Lodash", "JavaScript Library", None, "Librería utilitaria JavaScript para manejo de arrays, objetos y funciones")
+        add_tech("Lodash", "JavaScript Library", None, "JavaScript utility library delivering modularity, performance and extras")
     if re.search(r'axios(?:\.min)?\.js', body, re.I):
-        add_tech("Axios", "JavaScript Library", None, "Cliente HTTP basado en promesas para el navegador y Node.js")
+        add_tech("Axios", "JavaScript Library", None, "Promise-based HTTP client for browser and Node.js environments")
 
-    # 7. Lenguajes de Backend
+    # 7. Backend Programming Languages
     if "php" in powered_by.lower():
         v_match = re.search(r"php/([\d\.]+)", powered_by, re.I)
-        add_tech("PHP", "Programming Language", v_match.group(1) if v_match else None, "Lenguaje de programación del lado del servidor para aplicaciones dinámicas")
+        add_tech("PHP", "Programming Language", v_match.group(1) if v_match else None, "Server-side programming language for dynamic web applications")
     elif "phpsessid" in str(h_lower.get("set-cookie", "")).lower():
-        add_tech("PHP", "Programming Language", None, "Lenguaje de programación del lado del servidor detectado por cookie PHPSESSID")
+        add_tech("PHP", "Programming Language", None, "Server-side programming language detected via PHPSESSID cookie")
 
-    # 8. Analítica & Marketing
+    # 8. Analytics & Marketing
     gtm_match = re.search(r'googletagmanager\.com/gtm\.js\?id=(GTM-[A-Z0-9]+)', body)
     if gtm_match or "gtm.js" in body:
         ver = gtm_match.group(1) if gtm_match else None
         add_tech(
             "Google Tag Manager", "Tag Manager",
             ver,
-            "Gestor de etiquetas para añadir y actualizar etiquetas de medición y marketing",
+            "Tag management system to add and update measurement and marketing tags",
             "https://tagmanager.google.com"
         )
 
@@ -585,31 +585,31 @@ def _detect_wappalyzer_technologies(
         add_tech(
             "Google Analytics (GA4)", "Analytics",
             ver,
-            "Plataforma de analítica digital de Google para seguimiento de tráfico y comportamiento de usuarios",
+            "Google digital analytics platform for tracking traffic and user engagement",
             "https://analytics.google.com"
         )
 
     if re.search(r'connect\.facebook\.net/[^"\'\s]+/fbevents\.js|fbq\(', body):
-        add_tech("Meta Pixel", "Analytics", None, "Píxel de seguimiento de conversiones y audiencias de Meta / Facebook Ads")
+        add_tech("Meta Pixel", "Analytics", None, "Conversion and audience tracking pixel for Meta / Facebook Ads")
 
     if re.search(r'hotjar\.com|static\.hotjar\.com', body):
-        add_tech("Hotjar", "Analytics", None, "Herramienta de mapas de calor, grabaciones de sesiones y feedback de usuarios")
+        add_tech("Hotjar", "Analytics", None, "Heatmaps, session recordings, and user feedback behavioral analytics tool")
 
-    # 9. Seguridad & Verificación
+    # 9. Security & Anti-Bot
     if re.search(r'google\.com/recaptcha|g-recaptcha', body):
-        add_tech("Google reCAPTCHA", "Security", None, "Servicio de detección de bots y prevención de abusos automatizados")
+        add_tech("Google reCAPTCHA", "Security", None, "Bot detection and automated abuse prevention security service")
     if re.search(r'challenges\.cloudflare\.com/turnstile', body):
-        add_tech("Cloudflare Turnstile", "Security", None, "Alternativa moderna y respetuosa con la privacidad frente a CAPTCHAs tradicionales")
+        add_tech("Cloudflare Turnstile", "Security", None, "Privacy-preserving, frictionless CAPTCHA alternative")
     if re.search(r'hcaptcha\.com', body):
-        add_tech("hCaptcha", "Security", None, "Solución de protección frente a bots y malware con privacidad reforzada")
+        add_tech("hCaptcha", "Security", None, "Anti-bot and malware defense solution with reinforced user privacy")
 
-    # 10. Datos Estructurados, SEO & Fuentes
+    # 10. Structured Data, SEO & Fonts
     if re.search(r'<script[^>]*type=["\']application/ld\+json["\']', body, re.I):
         types_found = re.findall(r'["\']@type["\']\s*:\s*["\']([A-Za-z0-9_]+)["\']', body)
         sample_types = ", ".join(list(dict.fromkeys(types_found))[:3]) if types_found else None
-        desc = "Datos estructurados semánticos vinculados para enriquecer la presentación en motores de búsqueda"
+        desc = "Linked semantic structured data to enrich search engine representations"
         if sample_types:
-            desc += f" (Entidades JSON-LD: {sample_types})"
+            desc += f" (JSON-LD Entities: {sample_types})"
         add_tech(
             "Schema.org (JSON-LD)", "SEO / Structured Data",
             None,
@@ -617,16 +617,16 @@ def _detect_wappalyzer_technologies(
             "https://schema.org",
             version_status="none",
             detection_mode="stealth",
-            provenance="Bloque JSON-LD en DOM"
+            provenance="DOM JSON-LD Block"
         )
 
     if re.search(r'<meta[^>]*property=["\']og:', body, re.I):
-        add_tech("Open Graph Protocol", "Social Metadata", None, "Metadatos que permiten transformar cualquier página en un objeto enriquecido en redes sociales")
+        add_tech("Open Graph Protocol", "Social Metadata", None, "Metadata protocol enabling any web page to become a rich object in social graphs")
 
     if re.search(r'fonts\.googleapis\.com|fonts\.gstatic\.com', body):
-        add_tech("Google Fonts", "Web Fonts", None, "Servicio de distribución de tipografías web optimizadas")
+        add_tech("Google Fonts", "Web Fonts", None, "Optimized web typography delivery service")
     if re.search(r'font-awesome|fontawesome|kit\.fontawesome\.com', body, re.I):
-        add_tech("Font Awesome", "Font / Icons", None, "Librería de iconos vectoriales para interfaces gráficas")
+        add_tech("Font Awesome", "Font / Icons", None, "Vector icon and social logo toolkit for graphic interfaces")
 
     return list(tech_map.values())
 
@@ -670,39 +670,39 @@ async def _deep_extract_technology_versions(
             ver = (fn_match.group(1) if fn_match else None) or detected_v
             if ver and "jQuery" in tech_dict and not tech_dict["jQuery"].get("version"):
                 tech_dict["jQuery"]["version"] = ver
-                tech_dict["jQuery"]["provenance"] = f"URL de script ({asset[:50]}...)"
+                tech_dict["jQuery"]["provenance"] = f"Script URL ({asset[:50]}...)"
 
         if "bootstrap" in asset_lower:
             fn_match = re.search(r'bootstrap[.-]([\d\.]+)(?:\.min)?\.(?:js|css)', asset_lower)
             ver = (fn_match.group(1) if fn_match else None) or detected_v
             if ver and "Bootstrap" in tech_dict and not tech_dict["Bootstrap"].get("version"):
                 tech_dict["Bootstrap"]["version"] = ver
-                tech_dict["Bootstrap"]["provenance"] = f"URL de stylesheet/script ({asset[:50]}...)"
+                tech_dict["Bootstrap"]["provenance"] = f"Stylesheet/Script URL ({asset[:50]}...)"
 
         if "lodash" in asset_lower and detected_v:
             if "Lodash" in tech_dict and not tech_dict["Lodash"].get("version"):
                 tech_dict["Lodash"]["version"] = detected_v
-                tech_dict["Lodash"]["provenance"] = "Ruta CDN de script"
+                tech_dict["Lodash"]["provenance"] = "CDN script path"
 
         if "vue" in asset_lower and detected_v:
             if "Vue.js" in tech_dict and not tech_dict["Vue.js"].get("version"):
                 tech_dict["Vue.js"]["version"] = detected_v
-                tech_dict["Vue.js"]["provenance"] = "Ruta CDN de script"
+                tech_dict["Vue.js"]["provenance"] = "CDN script path"
 
         if "react" in asset_lower and detected_v:
             if "React" in tech_dict and not tech_dict["React"].get("version"):
                 tech_dict["React"]["version"] = detected_v
-                tech_dict["React"]["provenance"] = "Ruta CDN de script"
+                tech_dict["React"]["provenance"] = "CDN script path"
 
         if "angular" in asset_lower and detected_v:
             if "Angular" in tech_dict and not tech_dict["Angular"].get("version"):
                 tech_dict["Angular"]["version"] = detected_v
-                tech_dict["Angular"]["provenance"] = "Ruta CDN de script"
+                tech_dict["Angular"]["provenance"] = "CDN script path"
 
         if "font-awesome" in asset_lower or "fontawesome" in asset_lower:
             if detected_v and "Font Awesome" in tech_dict and not tech_dict["Font Awesome"].get("version"):
                 tech_dict["Font Awesome"]["version"] = detected_v
-                tech_dict["Font Awesome"]["provenance"] = "Ruta CDN de fuentes"
+                tech_dict["Font Awesome"]["provenance"] = "CDN font path"
 
     # En Modo Stealth (Pasivo), CERO peticiones adicionales para preservar OPSEC y legalidad
     if scan_mode != "active":
@@ -884,15 +884,15 @@ async def inspect_http_headers(target: str, scan_mode: str = "passive") -> Dict[
                                             t["version"] = f"~{ssh_info['inferred_nginx']}"
                                             t["version_status"] = "inferred_active"
                                             t["detection_mode"] = "active"
-                                            t["provenance"] = f"Banner SSH p22 ({ssh_info['raw_banner']})"
-                                            t["description"] = (t.get("description", "") + f" [Modo Activo: Se sondeó el puerto 22 SSH detectando '{ssh_info['raw_banner']}', lo que identifica {ssh_info['os']} y paquete Nginx {ssh_info['inferred_nginx']}].").strip()
+                                            t["provenance"] = f"SSH p22 Banner ({ssh_info['raw_banner']})"
+                                            t["description"] = (t.get("description", "") + f" [Active Mode: Probed port 22 SSH detecting '{ssh_info['raw_banner']}', identifying {ssh_info['os']} and Nginx package {ssh_info['inferred_nginx']}].").strip()
                                     elif "Apache" in t["name"] and (not t.get("version") or t.get("version_status") == "hardened"):
                                         if ssh_info.get("inferred_apache"):
                                             t["version"] = f"~{ssh_info['inferred_apache']}"
                                             t["version_status"] = "inferred_active"
                                             t["detection_mode"] = "active"
-                                            t["provenance"] = f"Banner SSH p22 ({ssh_info['raw_banner']})"
-                                            t["description"] = (t.get("description", "") + f" [Modo Activo: Se sondeó el puerto 22 SSH detectando '{ssh_info['raw_banner']}', lo que identifica {ssh_info['os']} y paquete Apache {ssh_info['inferred_apache']}].").strip()
+                                            t["provenance"] = f"SSH p22 Banner ({ssh_info['raw_banner']})"
+                                            t["description"] = (t.get("description", "") + f" [Active Mode: Probed port 22 SSH detecting '{ssh_info['raw_banner']}', identifying {ssh_info['os']} and Apache package {ssh_info['inferred_apache']}].").strip()
 
                                 if ssh_info.get("os"):
                                     wapp_tech.append({
@@ -901,8 +901,8 @@ async def inspect_http_headers(target: str, scan_mode: str = "passive") -> Dict[
                                         "version": None,
                                         "version_status": "verified",
                                         "detection_mode": "active",
-                                        "provenance": f"Banner TCP p22 ({ssh_info['raw_banner']})",
-                                        "description": f"Sistema operativo del servidor identificado activamente mediante banner grabbing en el puerto 22 SSH ({ssh_info['raw_banner']}).",
+                                        "provenance": f"TCP p22 Banner ({ssh_info['raw_banner']})",
+                                        "description": f"Server operating system actively identified via banner grabbing on port 22 SSH ({ssh_info['raw_banner']}).",
                                         "website": "https://ubuntu.com" if "Ubuntu" in ssh_info["os"] else "https://debian.org"
                                     })
                     except Exception:
@@ -923,7 +923,7 @@ async def inspect_http_headers(target: str, scan_mode: str = "passive") -> Dict[
                     if v and v_st != "hardened":
                         badge_str = f" v{v}"
                     elif v_st == "hardened":
-                        badge_str = " [Oculta / Hardened]"
+                        badge_str = " [Hidden / Hardened]"
                     else:
                         badge_str = ""
                     formatted_techs.append(f"{t['name']}{badge_str} ({t['category']})")
@@ -936,8 +936,8 @@ async def inspect_http_headers(target: str, scan_mode: str = "passive") -> Dict[
                 result["uptime"] = {
                     "status": "Active" if resp.status_code < 400 else f"HTTP {resp.status_code}",
                     "latency_ms": latency_ms,
-                    "server_type": server_header or "No especificado",
-                    "page_title": meta_info.get("title") or "No disponible",
+                    "server_type": server_header or "Not specified",
+                    "page_title": meta_info.get("title") or "Not available",
                     "meta_description": meta_info.get("description") or "Not available",
                     "meta_keywords": meta_info.get("keywords") or "Not available",
                     "last_checked": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),

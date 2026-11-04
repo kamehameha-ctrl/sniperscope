@@ -300,13 +300,13 @@ export default function GraphCanvas({ graphData, onSelectNode, selectedNodeId })
           <button
             onClick={() => applyLayout(layoutMode)}
             className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-[#1a2233] rounded transition-colors cursor-pointer"
-            title="Reorganizar grafo"
+            title="Reorganize graph layout"
           >
             <RotateCcw size={14} />
           </button>
         </div>
 
-        {/* Selector de disposición / Layout */}
+        {/* Layout Selector */}
         <div className="flex items-center space-x-1 bg-[#0f131c]/90 border border-[#1e2638] p-1 rounded backdrop-blur-sm text-xs font-mono">
           <button
             onClick={() => applyLayout('cose')}
@@ -315,10 +315,10 @@ export default function GraphCanvas({ graphData, onSelectNode, selectedNodeId })
                 ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-[#1a2233]'
             }`}
-            title="Distribución por Fuerza física (Cose Anti-colisión)"
+            title="Physics-based Force-directed layout (Cose Anti-collision)"
           >
             <Share2 size={12} />
-            <span>Fuerza</span>
+            <span>Force</span>
           </button>
           <button
             onClick={() => applyLayout('concentric')}
@@ -327,7 +327,7 @@ export default function GraphCanvas({ graphData, onSelectNode, selectedNodeId })
                 ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-[#1a2233]'
             }`}
-            title="Distribución Radial / Concéntrica (Sin solapamientos)"
+            title="Concentric Radial layout (Clear hierarchy without overlaps)"
           >
             <CircleDot size={12} />
             <span>Radial</span>
@@ -339,15 +339,15 @@ export default function GraphCanvas({ graphData, onSelectNode, selectedNodeId })
                 ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-[#1a2233]'
             }`}
-            title="Distribución Jerárquica en Árbol"
+            title="Hierarchical Tree layout"
           >
             <Network size={12} />
-            <span>Árbol</span>
+            <span>Tree</span>
           </button>
         </div>
       </div>
 
-      {/* Leyenda de nodos */}
+      {/* Node Legend */}
       <div className="absolute bottom-3 left-3 z-10 flex flex-wrap items-center gap-3 bg-[#0f131c]/90 border border-[#1e2638] px-3 py-1.5 rounded text-[11px] font-mono backdrop-blur-sm text-slate-400">
         <span className="flex items-center space-x-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] border border-[#38bdf8]"></span>
@@ -355,15 +355,15 @@ export default function GraphCanvas({ graphData, onSelectNode, selectedNodeId })
         </span>
         <span className="flex items-center space-x-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-[#064e3b] border border-[#10b981]"></span>
-          <span>IP Host</span>
+          <span>Host IP</span>
         </span>
         <span className="flex items-center space-x-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-[#1e1b4b] border border-[#818cf8]"></span>
-          <span>Puerto / Servicio</span>
+          <span>Port / Service</span>
         </span>
         <span className="flex items-center space-x-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-[#7f1d1d] border border-[#ef4444]"></span>
-          <span>Vulnerabilidad (CVE)</span>
+          <span>Vulnerability (CVE)</span>
         </span>
       </div>
 

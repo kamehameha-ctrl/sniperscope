@@ -239,7 +239,7 @@ export default function App() {
         <button
           type="button"
           onClick={handleGoHome}
-          title="Volver a la página de inicio de SniperScope"
+          title="Return to SniperScope Home Dashboard"
           className="flex items-center space-x-3 text-left group cursor-pointer focus:outline-none"
         >
           <div className="w-7 h-7 bg-[#0f172a] border border-[#38bdf8]/40 group-hover:border-[#38bdf8] group-hover:bg-[#38bdf8]/10 rounded flex items-center justify-center text-[#38bdf8] transition-colors">
@@ -255,23 +255,23 @@ export default function App() {
               </span>
             </div>
             <div className="text-[10px] font-mono text-slate-500">
-              Inteligencia de Superficie de Ataque, Shodan CVEDB & Auditoría de Vulnerabilidades
+              Attack Surface Intelligence, Shodan CVEDB & Vulnerability Assessment
             </div>
           </div>
         </button>
 
-        {/* Conmutador de Vistas (Icon-Only) + Exportar Informe (Icon-Only) + Estado Shodan + Logout */}
+        {/* View Mode Switcher + Export Report + Shodan Status + Logout */}
         <div className="flex items-center gap-2 text-xs font-mono">
-          {/* Botón de acceso directo a Sherlock SOCMINT */}
+          {/* Direct Access to Digital Footprint SOCMINT */}
           <button
             type="button"
             onClick={() => handleSwitchModule(activeModule === 'sherlock' ? 'easm' : 'sherlock')}
             title={
               activeModule === 'sherlock'
-                ? 'Volver al escáner de Infraestructura y Red (EASM)'
-                : 'Sherlock // SOCMINT Hunter (Identidad y Cuentas de Usuario)'
+                ? 'Back to Infrastructure & Network Scanner (EASM)'
+                : 'Digital Footprint // Identity & Account Reconnaissance (SOCMINT)'
             }
-            aria-label="Sherlock SOCMINT Hunter"
+            aria-label="Digital Footprint Reconnaissance"
             className={`p-2 rounded flex items-center justify-center transition-all cursor-pointer border ${
               activeModule === 'sherlock'
                 ? 'bg-purple-950/80 border-purple-500 text-purple-300 shadow-md shadow-purple-900/40 ring-1 ring-purple-500/50'
@@ -281,7 +281,7 @@ export default function App() {
             <UserSearch size={16} />
           </button>
 
-          {/* Selector de Modo de Vista */}
+          {/* View Mode Selector */}
           <div className="flex items-center bg-[#090b10] border border-[#1e2638] p-0.5 rounded">
             <button
               onClick={() => setViewMode('split')}
@@ -290,8 +290,8 @@ export default function App() {
                   ? 'bg-[#1e2638] text-[#38bdf8]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Vista Dividida (Dossier en Texto + Grafo)"
-              aria-label="Vista Dividida"
+              title="Split View (Dossier + Topology Graph)"
+              aria-label="Split View"
             >
               <Columns size={16} />
             </button>
@@ -302,8 +302,8 @@ export default function App() {
                   ? 'bg-[#1e2638] text-[#38bdf8]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Visualizar solo información en texto"
-              aria-label="Solo Texto"
+              title="Text Dossier Only"
+              aria-label="Text Only"
             >
               <FileText size={16} />
             </button>
@@ -314,36 +314,36 @@ export default function App() {
                   ? 'bg-[#1e2638] text-[#38bdf8]'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Visualizar solo el grafo de relaciones"
-              aria-label="Solo Grafo"
+              title="Interactive Relationship Graph Only"
+              aria-label="Graph Only"
             >
               <Network size={16} />
             </button>
           </div>
 
-          {/* Botón Exportar Informe Forense (Solo Icono Download) */}
+          {/* Export Report Button */}
           <button
             onClick={() => setIsReportModalOpen(true)}
             disabled={!scanData}
-            title="Exportar Informe Profesional de Análisis Forense"
-            aria-label="Exportar Informe Forense"
+            title="Export Professional Forensic Security Report"
+            aria-label="Export Forensic Report"
             className="p-2 bg-[#0284c7] hover:bg-[#0369a1] disabled:opacity-40 disabled:pointer-events-none text-white rounded flex items-center justify-center transition-colors cursor-pointer"
           >
             <Download size={16} />
           </button>
 
-          {/* Estado Shodan y Proxy */}
+          {/* Shodan & Proxy Status */}
           {shodanInfo && (
             <div className="hidden sm:flex items-center space-x-2 bg-[#090b10] border border-[#1e2638] px-2.5 py-1.5 rounded">
               <span className={`w-2 h-2 rounded-full ${shodanInfo.configured ? 'bg-[#10b981]' : 'bg-[#eab308]'}`} />
               <span className="text-slate-400">Shodan:</span>
-              <span className="text-slate-200 font-semibold uppercase">{shodanInfo.plan || 'Activo'}</span>
+              <span className="text-slate-200 font-semibold uppercase">{shodanInfo.plan || 'Active'}</span>
               {shodanInfo.proxy_configured && (
                 <span
                   title={
                     shodanInfo.proxy_active
-                      ? 'Túnel Cloudflare WARP activo en 127.0.0.1:40000'
-                      : 'Proxy WARP (127.0.0.1:40000) configurado en modo Auto-Fallback (conecta Cloudflare WARP para enrutar por el túnel)'
+                      ? 'Cloudflare WARP tunnel active on 127.0.0.1:40000'
+                      : 'WARP Proxy (127.0.0.1:40000) configured in Auto-Fallback mode'
                   }
                   className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
                     shodanInfo.proxy_active
@@ -357,11 +357,11 @@ export default function App() {
             </div>
           )}
 
-          {/* Botón Bloquear Estación / Cerrar Sesión */}
+          {/* Lock Workstation / Logout Button */}
           <button
             onClick={handleLogout}
-            title={`Bloquear estación (${authState.username})`}
-            aria-label="Cerrar sesión"
+            title={`Lock Workstation (${authState.username})`}
+            aria-label="Lock Workstation"
             className="p-2 bg-[#151c28] hover:bg-[#2a1317] text-slate-400 hover:text-[#f87171] border border-[#1e2638] rounded flex items-center justify-center transition-colors cursor-pointer"
           >
             <LogOut size={15} />
@@ -406,10 +406,10 @@ export default function App() {
                   </div>
                 </div>
                 <div className="font-mono text-sm font-bold text-white tracking-wide">
-                  EJECUTANDO RECONOCIMIENTO EN PARALELO
+                  EXECUTING PARALLEL RECONNAISSANCE PIPELINE
                 </div>
                 <div className="font-mono text-xs text-[#38bdf8] mt-1">
-                  Objetivo: <span className="text-white font-semibold">{activeTarget}</span>
+                  Target: <span className="text-white font-semibold">{activeTarget}</span>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-[10px] font-mono text-slate-400">
                   <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse">
@@ -422,7 +422,7 @@ export default function App() {
                     Shodan & CVEDB
                   </span>
                   <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:450ms]">
-                    TLS X.509 & Wappalyzer
+                    TLS X.509 & Web Tech
                   </span>
                   <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:600ms]">
                     RDAP & ASN

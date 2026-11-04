@@ -5,32 +5,32 @@ function generateRawTraceReport(scanData) {
   const { target, scan_timestamp, execution_trace = [] } = scanData;
 
   let raw = `================================================================================\n`;
-  raw += `SNIPERSCOPE EASM v3.0 // TRAZA FORENSE RAW (COMANDO A COMANDO / PETICIÓN A PETICIÓN)\n`;
+  raw += `SNIPERSCOPE EASM v3.2 // FORENSIC RAW TRACE (STEP-BY-STEP / COMMAND-BY-COMMAND)\n`;
   raw += `================================================================================\n`;
-  raw += `TARGET AUDITADO : ${target}\n`;
-  raw += `TIMESTAMP SESIÓN: ${scan_timestamp}\n`;
-  raw += `TOTAL PASOS     : ${execution_trace.length}\n`;
+  raw += `AUDITED TARGET  : ${target}\n`;
+  raw += `SESSION TIME UTC: ${scan_timestamp}\n`;
+  raw += `TOTAL STEPS     : ${execution_trace.length}\n`;
   raw += `================================================================================\n\n`;
 
   if (!execution_trace || execution_trace.length === 0) {
-    raw += `[!] No hay traza de ejecución disponible para este escaneo.\n`;
+    raw += `[!] No execution trace available for this scan session.\n`;
     return raw;
   }
 
   execution_trace.forEach((item) => {
     raw += `--------------------------------------------------------------------------------\n`;
     raw += `[STEP ${item.step}] [${item.timestamp}] :: ${item.phase}\n`;
-    raw += `OPERACIÓN   : ${item.title}\n`;
-    raw += `RAZONAMIENTO: ${item.reasoning}\n`;
-    raw += `COMANDO CLI : $ ${item.command}\n`;
-    raw += `PETICIÓN RED: ${item.request}\n`;
+    raw += `OPERATION  : ${item.title}\n`;
+    raw += `REASONING  : ${item.reasoning}\n`;
+    raw += `CLI COMMAND: $ ${item.command}\n`;
+    raw += `NET REQUEST: ${item.request}\n`;
     raw += `--------------------------------------------------------------------------------\n`;
-    raw += `>>> RESPUESTA CRUDA OBTENIDA (RAW OUTPUT):\n`;
+    raw += `>>> CAPTURED RAW PAYLOAD OUTPUT:\n`;
     raw += `${item.raw_output}\n\n`;
   });
 
   raw += `================================================================================\n`;
-  raw += `FIN DE LA TRAZA DE EJECUCIÓN FORENSE RAW - SNIPERSCOPE - OBJETIVO: ${target}\n`;
+  raw += `END OF FORENSIC RAW EXECUTION TRACE - SNIPERSCOPE - TARGET: ${target}\n`;
   raw += `================================================================================\n`;
 
   return raw;
@@ -39,27 +39,27 @@ function generateRawTraceReport(scanData) {
 function generateMarkdownReport(scanData) {
   const { target, scan_timestamp, risk = {}, summary = {}, shodan = [], dns = {}, http_audit = {}, vulnerabilities = [] } = scanData;
 
-  let md = `# INFORME FORENSE DE SUPERFICIE DE ATAQUE E INTELIGENCIA OSINT\n\n`;
-  md += `- **Objetivo Auditado:** \`${target}\`\n`;
-  md += `- **Fecha y Hora (UTC):** ${scan_timestamp}\n`;
-  md += `- **Índice de Riesgo Global:** **${risk.score ?? 0}/100 (${risk.level || 'N/A'} - Grado ${risk.grade || '-'})**\n`;
-  md += `- **Clasificación:** TLP:AMBER (Confidencial - Uso Interno de Ciberseguridad)\n`;
-  md += `- **Motor de Análisis:** SniperScope EASM v3.0 (Shodan Official API + Shodan CVEDB + TLS/HTTP & Path Audit)\n\n`;
+  let md = `# EXTERNAL ATTACK SURFACE & OSINT FORENSIC AUDIT REPORT\n\n`;
+  md += `- **Audited Target:** \`${target}\`\n`;
+  md += `- **Timestamp (UTC):** ${scan_timestamp}\n`;
+  md += `- **Overall Risk Score:** **${risk.score ?? 0}/100 (${risk.level || 'N/A'} - Grade ${risk.grade || '-'})**\n`;
+  md += `- **Classification:** TLP:AMBER (Confidential - Cybersecurity Authorized Use Only)\n`;
+  md += `- **Analysis Engine:** SniperScope EASM v3.2 (Shodan API + Shodan CVEDB + TLS/HTTP & Path Audit)\n\n`;
   md += `---\n\n`;
 
-  md += `## 1. RESUMEN EJECUTIVO Y POSTURA DE RIESGO\n\n`;
-  md += `| Indicador | Valor Detectado |\n`;
+  md += `## 1. EXECUTIVE SUMMARY & RISK POSTURE\n\n`;
+  md += `| Indicator | Detected Value |\n`;
   md += `| :--- | :--- |\n`;
-  md += `| **Índice de Riesgo Global** | **${risk.score ?? 0}/100 (${risk.level || 'N/A'} - Grado ${risk.grade || '-'})** |\n`;
-  md += `| **Direcciones IP Activas** | ${summary.ips_count || 0} |\n`;
-  md += `| **Subdominios Públicos (CRT.sh)** | ${summary.subdomains_count || 0} |\n`;
-  md += `| **Puertos y Servicios Expuestos** | ${summary.open_ports_count || 0} |\n`;
-  md += `| **Total Vulnerabilidades (CVEs)** | ${summary.vulnerabilities_count || 0} (Críticas: ${summary.critical_vulns || 0}, Altas: ${summary.high_vulns || 0}, Medias: ${summary.medium_vulns || 0}, CISA KEV: ${summary.kev_vulns || 0}) |\n`;
-  md += `| **Protección WAF / CDN** | ${http_audit?.waf_cdn || 'No detectado (IP expuesta directamente)'} |\n`;
-  md += `| **Protección Anti-Spoofing (SPF / DMARC)** | SPF: ${dns.email_security?.has_spf ? 'Presente' : 'AUSENTE'} / DMARC: ${dns.email_security?.has_dmarc ? 'Presente' : 'AUSENTE'} |\n\n`;
+  md += `| **Overall Risk Score** | **${risk.score ?? 0}/100 (${risk.level || 'N/A'} - Grade ${risk.grade || '-'})** |\n`;
+  md += `| **Active Host IPs** | ${summary.ips_count || 0} |\n`;
+  md += `| **Public Subdomains (CRT.sh)** | ${summary.subdomains_count || 0} |\n`;
+  md += `| **Exposed Ports & Services** | ${summary.open_ports_count || 0} |\n`;
+  md += `| **Total Vulnerabilities (CVEs)** | ${summary.vulnerabilities_count || 0} (Critical: ${summary.critical_vulns || 0}, High: ${summary.high_vulns || 0}, Medium: ${summary.medium_vulns || 0}, CISA KEV: ${summary.kev_vulns || 0}) |\n`;
+  md += `| **WAF / CDN Edge Protection** | ${http_audit?.waf_cdn || 'Not detected (Direct origin exposed)'} |\n`;
+  md += `| **Email Anti-Spoofing (SPF / DMARC)** | SPF: ${dns.email_security?.has_spf ? 'CONFIGURED' : 'MISSING'} / DMARC: ${dns.email_security?.has_dmarc ? 'CONFIGURED' : 'MISSING'} |\n\n`;
 
   if (risk.findings && risk.findings.length > 0) {
-    md += `### Hallazgos Prioritarios de Auditoría:\n\n`;
+    md += `### Priority Audit Findings:\n\n`;
     risk.findings.forEach((f) => {
       md += `- **[${f.severity}] ${f.title}:** ${f.detail}\n`;
     });
@@ -67,21 +67,21 @@ function generateMarkdownReport(scanData) {
   }
 
   md += `---\n\n`;
-  md += `## 2. INFRAESTRUCTURA DE RED, PUERTOS ABIERTOS Y SERVICIOS\n\n`;
+  md += `## 2. NETWORK INFRASTRUCTURE, OPEN PORTS & RUNNING SERVICES\n\n`;
   if (shodan.length === 0) {
-    md += `No se registraron hosts activos en Shodan.\n\n`;
+    md += `No active Shodan hosts recorded.\n\n`;
   } else {
     shodan.forEach((h) => {
       md += `### Host IP: \`${h.ip}\`\n`;
-      md += `- **Organización / ISP:** ${h.org || 'N/A'} (${h.isp || 'N/A'})\n`;
+      md += `- **Organization / ISP:** ${h.org || 'N/A'} (${h.isp || 'N/A'})\n`;
       md += `- **ASN:** ${h.asn || 'N/A'}\n`;
-      md += `- **Sistema Operativo Inferido:** ${h.os || 'No especificado'}\n`;
-      md += `- **Ubicación Geográfica:** ${[h.city, h.country].filter(Boolean).join(', ') || 'N/A'}\n`;
-      md += `- **CPEs Identificados:** ${h.cpes?.length ? h.cpes.map(c => `\`${c}\``).join(', ') : 'Ninguno'}\n\n`;
+      md += `- **Inferred Operating System:** ${h.os || 'Not specified'}\n`;
+      md += `- **Geographic Location:** ${[h.city, h.country].filter(Boolean).join(', ') || 'N/A'}\n`;
+      md += `- **Identified CPEs:** ${h.cpes?.length ? h.cpes.map(c => `\`${c}\``).join(', ') : 'None'}\n\n`;
 
       if (h.services && h.services.length > 0) {
-        md += `#### Servicios en Ejecución en \`${h.ip}\`:\n\n`;
-        md += `| Puerto | Protocolo | Servicio / Producto | Versión | Info Adicional | CVEs |\n`;
+        md += `#### Running Services on \`${h.ip}\`:\n\n`;
+        md += `| Port | Protocol | Service / Product | Version | Additional Info | CVEs |\n`;
         md += `| :--- | :--- | :--- | :--- | :--- | :--- |\n`;
         h.services.forEach((s) => {
           md += `| **${s.port}/${s.transport}** | ${s.module || s.protocol} | ${s.product} | \`${s.version || '-'}\` | ${s.info || '-'} | ${s.vulns_count || 0} |\n`;
@@ -90,7 +90,7 @@ function generateMarkdownReport(scanData) {
 
         h.services.forEach((s) => {
           if (s.banner) {
-            md += `**Evidencia de Banner (Puerto ${s.port}/${s.transport} - ${s.product}):**\n\`\`\`text\n${s.banner}\n\`\`\`\n\n`;
+            md += `**Banner Evidence (Port ${s.port}/${s.transport} - ${s.product}):**\n\`\`\`text\n${s.banner}\n\`\`\`\n\n`;
           }
         });
       }
@@ -98,60 +98,60 @@ function generateMarkdownReport(scanData) {
   }
 
   md += `---\n\n`;
-  md += `## 3. AUDITORÍA WEB, CERTIFICADO TLS/SSL, CABECERAS Y RUTAS EXPUESTAS\n\n`;
+  md += `## 3. WEB SECURITY AUDIT, TLS/SSL CERTIFICATE & EXPOSED ARTIFACTS\n\n`;
   if (http_audit?.tls?.enabled) {
-    md += `### Inspección Criptográfica TLS/SSL (Puerto 443):\n`;
-    md += `- **Protocolo y Suite:** \`${http_audit.tls.protocol_version}\` · \`${http_audit.tls.cipher_suite}\` (${http_audit.tls.cipher_bits} bits)\n`;
-    md += `- **Autoridad Certificadora (CA):** ${http_audit.tls.issuer_org || http_audit.tls.issuer_cn || 'N/A'}\n`;
-    md += `- **Vencimiento:** ${http_audit.tls.not_after || 'N/A'} (${http_audit.tls.days_remaining ?? '-'} días restantes)\n\n`;
+    md += `### TLS/SSL Cryptographic Inspection (Port 443):\n`;
+    md += `- **Protocol & Cipher Suite:** \`${http_audit.tls.protocol_version}\` · \`${http_audit.tls.cipher_suite}\` (${http_audit.tls.cipher_bits} bits)\n`;
+    md += `- **Certificate Authority (CA):** ${http_audit.tls.issuer_org || http_audit.tls.issuer_cn || 'N/A'}\n`;
+    md += `- **Expiration:** ${http_audit.tls.not_after || 'N/A'} (${http_audit.tls.days_remaining ?? '-'} days remaining)\n\n`;
   }
 
   if (http_audit?.reachable) {
-    md += `- **URL Inspeccionada:** ${http_audit.final_url}\n`;
-    md += `- **Estado HTTP:** ${http_audit.status_code}\n`;
-    md += `- **Cabecera Server:** \`${http_audit.server || 'No expuesta'}\`\n`;
-    md += `- **Política CORS:** \`${http_audit.cors_policy?.allow_origin || 'Restringido / No expuesto'}\`\n\n`;
-    md += `| Cabecera | Estado | Valor / Observación |\n`;
+    md += `- **Inspected URL:** ${http_audit.final_url}\n`;
+    md += `- **HTTP Status Code:** ${http_audit.status_code}\n`;
+    md += `- **Server Header:** \`${http_audit.server || 'Not disclosed (Hardened)'}\`\n`;
+    md += `- **CORS Policy:** \`${http_audit.cors_policy?.allow_origin || 'Restricted / Not exposed'}\`\n\n`;
+    md += `| Security Header | Status | Value / Description |\n`;
     md += `| :--- | :--- | :--- |\n`;
     (http_audit.security_headers || []).forEach((sh) => {
-      md += `| \`${sh.header}\` | ${sh.present ? 'PRESENTE' : 'AUSENTE'} | ${sh.present ? `\`${sh.value}\`` : sh.description} |\n`;
+      md += `| \`${sh.header}\` | ${sh.present ? 'PRESENT' : 'MISSING'} | ${sh.present ? `\`${sh.value}\`` : sh.description} |\n`;
     });
     md += `\n`;
 
     if (http_audit.exposed_paths && http_audit.exposed_paths.length > 0) {
-      md += `### Rutas y Artefactos Públicos Detectados:\n\n`;
+      md += `### Discovered Public Paths & Artifacts:\n\n`;
       http_audit.exposed_paths.forEach((ep) => {
         md += `- **[${ep.severity}] \`${ep.path}\` (HTTP ${ep.status}):** ${ep.label} (${ep.url})\n`;
       });
       md += `\n`;
     }
   } else {
-    md += `El objetivo no ofreció respuesta HTTP/HTTPS directa.\n\n`;
+    md += `The target provided no direct HTTP/HTTPS web response.\n\n`;
   }
 
   md += `---\n\n`;
-  md += `## 4. CATÁLOGO TÉCNICO DE VULNERABILIDADES (SHODAN CVEDB)\n\n`;
+  md += `## 4. TECHNICAL VULNERABILITY CATALOG (SHODAN CVEDB)\n\n`;
   if (vulnerabilities.length === 0) {
-    md += `No se registraron vulnerabilidades públicas asociadas.\n\n`;
+    md += `No known public vulnerabilities associated.\n\n`;
   } else {
     vulnerabilities.forEach((v) => {
-      md += `### ${v.cve} [${v.severity || 'HIGH'}] ${v.cvss ? `(CVSS: ${v.cvss})` : ''} ${v.kev ? '[CISA KEV - EXPLOTADA ACTIVAMENTE]' : ''}\n`;
-      md += `- **Componente / Servicio:** ${v.service || v.product || 'Host'} ${v.ports?.length ? `(Puertos: ${v.ports.join(', ')})` : ''}\n`;
+      md += `### ${v.cve} [${v.severity || 'HIGH'}] ${v.cvss ? `(CVSS: ${v.cvss})` : ''} ${v.kev ? '[CISA KEV - ACTIVELY EXPLOITED]' : ''}\n`;
+      md += `- **Component / Service:** ${v.service || v.product || 'Host'} ${v.ports?.length ? `(Ports: ${v.ports.join(', ')})` : ''}\n`;
       if (v.epss !== null && v.epss !== undefined) {
-        md += `- **Probabilidad EPSS:** ${(Number(v.epss) * 100).toFixed(2)}% ${v.ranking_epss ? `(Percentil ${(Number(v.ranking_epss) * 100).toFixed(0)}%)` : ''}\n`;
+        md += `- **EPSS Exploit Probability:** ${(Number(v.epss) * 100).toFixed(2)}% ${v.ranking_epss ? `(Percentile ${(Number(v.ranking_epss) * 100).toFixed(0)}%)` : ''}\n`;
       }
-      if (v.published_time) md += `- **Fecha de Publicación:** ${v.published_time}\n`;
-      md += `- **Referencia NIST NVD:** ${v.nvd_url}\n`;
-      md += `- **Descripción Técnica:** ${v.summary}\n\n`;
+      if (v.published_time) md += `- **Published Date:** ${v.published_time}\n`;
+      md += `- **NIST NVD Reference:** ${v.nvd_url}\n`;
+      md += `- **Technical Summary:** ${v.summary}\n\n`;
     });
   }
 
   md += `---\n\n`;
-  md += `## 5. RECOMENDACIONES DE REMEDIACIÓN Y HARDENING\n\n`;
-  md += `1. **Parcheo Prioritario de Servicios Expuestos:** Actualizar las versiones de software identificadas mediante CPE (priorizando aquellas con CVEs en catálogo CISA KEV o con CVSS >= 7.0).\n`;
-  md += `2. **Ocultación de Banners (Banner Hardening):** Configurar \`ServerTokens Prod\` (en Apache) o \`server_tokens off\` (en Nginx) para impedir la divulgación de versiones exactas.\n`;
-  md += `3. **Cabeceras de Seguridad Web:** Implementar \`Strict-Transport-Security\`, \`Content-Security-Policy\` y \`X-Frame-Options\`.\n`;
-  md += `4. **Políticas Anti-Spoofing de Correo:** Definir registros TXT para \`v=spf1\` y \`_dmarc\` con política \`p=quarantine\` o \`p=reject\`.\n`;
+  md += `## 5. HARDENING & REMEDIATION RECOMMENDATIONS\n\n`;
+  md += `1. **Priority Patching of Exposed Services:** Upgrade software components identified via CPE (prioritizing CVEs in CISA KEV catalog or CVSS >= 7.0).\n`;
+  md += `2. **Banner Hardening:** Configure \`ServerTokens Prod\` (Apache) or \`server_tokens off\` (Nginx) to suppress version disclosure.\n`;
+  md += `3. **Web Security Headers:** Enforce \`Strict-Transport-Security\`, \`Content-Security-Policy\`, and \`X-Frame-Options\`.\n`;
+  md += `4. **Email Anti-Spoofing Policies:** Deploy strict TXT records for \`v=spf1\` and \`_dmarc\` with \`p=quarantine\` or \`p=reject\` policies.\n`;
 
   return md;
 }
@@ -368,16 +368,16 @@ export default function ForensicReportModal({ isOpen, onClose, scanData }) {
             <Crosshair size={17} className="text-[#38bdf8]" />
             <div>
               <h3 className="text-sm font-mono font-bold text-white">
-                SniperScope // Exportador de Informe Profesional de Análisis Forense
+                SniperScope // Professional Forensic Security Report Generator
               </h3>
               <p className="text-[11px] font-mono text-slate-400">
-                Objetivo: {scanData.target} · {scanData.scan_timestamp}
+                Target: {scanData.target} · {scanData.scan_timestamp}
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* Conmutador de Vista Previa: Estándar vs RAW */}
+            {/* Format Preview Switcher: Standard vs RAW */}
             <div className="flex items-center bg-[#090b10] border border-[#1e2638] p-0.5 rounded font-mono text-[11px]">
               <button
                 onClick={() => setPreviewFormat('standard')}
@@ -387,7 +387,7 @@ export default function ForensicReportModal({ isOpen, onClose, scanData }) {
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Informe Ejecutivo
+                Executive Report
               </button>
               <button
                 onClick={() => setPreviewFormat('raw')}
@@ -398,12 +398,14 @@ export default function ForensicReportModal({ isOpen, onClose, scanData }) {
                 }`}
               >
                 <Terminal size={12} />
-                <span>Formato RAW (Paso a Paso)</span>
+                <span>RAW Trace (Step-by-Step)</span>
               </button>
             </div>
 
             <button
               onClick={onClose}
+              aria-label="Close modal"
+              title="Close modal"
               className="p-1 text-slate-400 hover:text-white hover:bg-[#1e2638] rounded cursor-pointer"
             >
               <X size={18} />
@@ -411,12 +413,12 @@ export default function ForensicReportModal({ isOpen, onClose, scanData }) {
           </div>
         </div>
 
-        {/* Barra de acciones de exportación */}
+        {/* Export Action Bar */}
         <div className="px-5 py-3 bg-[#090b10] border-b border-[#1e2638] flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs font-mono text-slate-400">
             {previewFormat === 'raw'
-              ? 'Modo RAW: Secuencia cronológica comando a comando y petición por petición con salidas crudas.'
-              : 'Formatos de salida ejecutivos y técnicos (sin traza cruda de peticiones):'}
+              ? 'RAW Mode: Chronological command-by-command and request-by-request sequence with raw payloads.'
+              : 'Executive & technical assessment deliverable formats:'}
           </span>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -424,7 +426,7 @@ export default function ForensicReportModal({ isOpen, onClose, scanData }) {
               className="px-3 py-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-mono font-semibold rounded flex items-center space-x-1.5 transition-colors cursor-pointer"
             >
               <Printer size={14} />
-              <span>Imprimir / PDF</span>
+              <span>Print / PDF</span>
             </button>
             <button
               onClick={handleDownloadHtml}
@@ -446,7 +448,7 @@ export default function ForensicReportModal({ isOpen, onClose, scanData }) {
                 handleDownloadRaw();
               }}
               className="px-3 py-1.5 bg-[#064e3b] hover:bg-[#047857] border border-[#10b981]/50 text-[#a7f3d0] text-xs font-mono font-semibold rounded flex items-center space-x-1.5 transition-colors cursor-pointer"
-              title="Descargar traza comando a comando y petición por petición"
+              title="Download full raw execution trace file"
             >
               <Terminal size={14} />
               <span>RAW (.log)</span>
@@ -454,7 +456,7 @@ export default function ForensicReportModal({ isOpen, onClose, scanData }) {
           </div>
         </div>
 
-        {/* Vista previa del formato seleccionado */}
+        {/* Selected Format Preview */}
         <div className="flex-1 overflow-y-auto p-5 bg-[#07090e] font-mono text-xs text-slate-300">
           {previewFormat === 'raw' ? (
             <div className="space-y-4">
@@ -472,22 +474,22 @@ export default function ForensicReportModal({ isOpen, onClose, scanData }) {
 
                   <div className="p-3.5 space-y-2.5 text-[11px]">
                     <div className="text-slate-400 font-sans">
-                      <strong className="text-slate-300 font-mono">Razonamiento: </strong>
+                      <strong className="text-slate-300 font-mono">Reasoning: </strong>
                       {item.reasoning}
                     </div>
                     <div className="bg-[#06080c] border border-[#141a26] p-2.5 rounded space-y-1">
                       <div>
-                        <span className="text-slate-500">COMANDO CLI : </span>
+                        <span className="text-slate-500">CLI COMMAND : </span>
                         <span className="text-[#10b981] font-semibold">$ {item.command}</span>
                       </div>
                       <div>
-                        <span className="text-slate-500">PETICIÓN RED: </span>
+                        <span className="text-slate-500">NET REQUEST : </span>
                         <span className="text-[#38bdf8]">{item.request}</span>
                       </div>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase text-slate-500 mb-1">
-                        Respuesta Cruda Obtenida (Raw Payload):
+                        Captured Raw Payload:
                       </div>
                       <pre className="p-3 bg-[#05070a] border border-[#1e2638] rounded text-[11px] text-slate-300 overflow-x-auto max-h-64 whitespace-pre-wrap">
                         {item.raw_output}

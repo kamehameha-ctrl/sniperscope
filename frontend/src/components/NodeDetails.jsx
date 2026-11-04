@@ -11,7 +11,7 @@ export default function NodeDetails({ selectedNode, onClose }) {
       <div className="flex items-start justify-between gap-2 border-b border-[#1e2638] pb-2.5 mb-3">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-[#38bdf8] font-bold">
-            Nodo Seleccionado · {type}
+            Selected Node · {type.toUpperCase()}
           </div>
           <div className="text-sm font-bold text-white break-all mt-0.5">{label}</div>
         </div>
@@ -25,16 +25,16 @@ export default function NodeDetails({ selectedNode, onClose }) {
         )}
       </div>
 
-      {/* NODO TIPO IP */}
+      {/* IP NODE */}
       {type === 'ip' && (
         <div className="space-y-2 text-[11px]">
           <div className="grid grid-cols-2 gap-2 bg-[#090b10] p-2.5 rounded border border-[#1e2638]">
-            <div><span className="text-slate-500">Organización:</span> {meta?.org || 'N/A'}</div>
+            <div><span className="text-slate-500">Organization:</span> {meta?.org || 'N/A'}</div>
             <div><span className="text-slate-500">ISP:</span> {meta?.isp || 'N/A'}</div>
             <div><span className="text-slate-500">ASN:</span> {meta?.asn || 'N/A'}</div>
-            <div><span className="text-slate-500">Sistema Operativo:</span> {meta?.os || 'N/A'}</div>
-            <div><span className="text-slate-500">Ubicación:</span> {[meta?.city, meta?.country].filter(Boolean).join(', ') || 'N/A'}</div>
-            <div><span className="text-slate-500">Puertos / CVEs:</span> {meta?.ports_count || 0} puertos · {meta?.vulns_count || 0} CVEs</div>
+            <div><span className="text-slate-500">Operating System:</span> {meta?.os || 'N/A'}</div>
+            <div><span className="text-slate-500">Location:</span> {[meta?.city, meta?.country].filter(Boolean).join(', ') || 'N/A'}</div>
+            <div><span className="text-slate-500">Ports / CVEs:</span> {meta?.ports_count || 0} ports · {meta?.vulns_count || 0} CVEs</div>
           </div>
           {meta?.cpes?.length > 0 && (
             <div className="text-[10px] text-slate-400">
@@ -45,28 +45,28 @@ export default function NodeDetails({ selectedNode, onClose }) {
         </div>
       )}
 
-      {/* NODO TIPO PUERTO / SERVICIO */}
+      {/* PORT / SERVICE NODE */}
       {type === 'port' && (
         <div className="space-y-2.5 text-[11px]">
           <div className="grid grid-cols-2 gap-2 bg-[#090b10] p-2.5 rounded border border-[#1e2638]">
             <div><span className="text-slate-500">Host IP:</span> {meta?.ip}</div>
-            <div><span className="text-slate-500">Puerto:</span> {meta?.port}/{meta?.transport?.toUpperCase()}</div>
-            <div><span className="text-slate-500">Servicio:</span> <strong className="text-white">{meta?.product}</strong></div>
-            <div><span className="text-slate-500">Versión:</span> <span className="text-[#38bdf8]">{meta?.version || 'N/A'}</span></div>
+            <div><span className="text-slate-500">Port:</span> {meta?.port}/{meta?.transport?.toUpperCase()}</div>
+            <div><span className="text-slate-500">Service:</span> <strong className="text-white">{meta?.product}</strong></div>
+            <div><span className="text-slate-500">Version:</span> <span className="text-[#38bdf8]">{meta?.version || 'N/A'}</span></div>
             {meta?.info && <div><span className="text-slate-500">Info:</span> {meta.info}</div>}
-            <div><span className="text-slate-500">Módulo:</span> {meta?.module || meta?.protocol}</div>
+            <div><span className="text-slate-500">Module:</span> {meta?.module || meta?.protocol}</div>
           </div>
 
           {meta?.http?.title && (
             <div className="bg-[#090b10] p-2 rounded border border-[#1e2638]">
-              <span className="text-slate-500">Título HTTP: </span>
+              <span className="text-slate-500">HTTP Title: </span>
               <span className="text-slate-200">{meta.http.title}</span>
             </div>
           )}
 
           {meta?.banner && (
             <div>
-              <div className="text-[10px] uppercase text-slate-500 mb-1">Banner Capturado:</div>
+              <div className="text-[10px] uppercase text-slate-500 mb-1">Captured Banner:</div>
               <pre className="p-2 bg-[#06080c] border border-[#1e2638] rounded text-[10px] text-slate-300 overflow-x-auto whitespace-pre-wrap">
                 {meta.banner}
               </pre>
@@ -75,7 +75,7 @@ export default function NodeDetails({ selectedNode, onClose }) {
         </div>
       )}
 
-      {/* NODO TIPO CVE */}
+      {/* CVE NODE */}
       {type === 'cve' && (
         <div className="space-y-2.5 text-[11px]">
           <div className="flex flex-wrap items-center gap-2">
@@ -83,7 +83,7 @@ export default function NodeDetails({ selectedNode, onClose }) {
               {meta?.severity || 'HIGH'} {meta?.cvss ? `· CVSS ${meta.cvss}` : ''}
             </span>
             {meta?.service && (
-              <span className="text-slate-400">Servicio: <strong className="text-slate-200">{meta.service}</strong></span>
+              <span className="text-slate-400">Service: <strong className="text-slate-200">{meta.service}</strong></span>
             )}
           </div>
           {meta?.summary && (
@@ -98,7 +98,7 @@ export default function NodeDetails({ selectedNode, onClose }) {
               rel="noreferrer"
               className="inline-flex items-center space-x-1 text-[#38bdf8] hover:underline"
             >
-              <span>Ver en NIST NVD</span>
+              <span>View in NIST NVD</span>
               <ExternalLink size={11} />
             </a>
             <a
@@ -114,10 +114,10 @@ export default function NodeDetails({ selectedNode, onClose }) {
         </div>
       )}
 
-      {/* NODO TARGET / SUBDOMINIO */}
+      {/* TARGET / SUBDOMAIN NODE */}
       {(type === 'target' || type === 'subdomain') && (
         <div className="text-[11px] text-slate-300">
-          Host auditado: <strong>{label}</strong> ({type === 'target' ? 'Dominio/Objetivo Principal' : 'Subdominio en Certificados'})
+          Audited Host: <strong>{label}</strong> ({type === 'target' ? 'Primary Target Asset' : 'Certificate Subdomain'})
         </div>
       )}
     </div>

@@ -44,77 +44,77 @@ def evaluate_technology_vulnerabilities(tech_name: str, version_str: Optional[st
         if parsed < (3, 5, 0):
             vulns.append({
                 "cve": "CVE-2020-11022",
-                "title": "Cross-Site Scripting (XSS) en Manipulación de HTML",
+                "title": "Cross-Site Scripting (XSS) in HTML Manipulation",
                 "severity": "MEDIUM",
                 "cvss": 6.1,
                 "vector": "Cross-Site Scripting (XSS)",
-                "summary": "Expresiones regulares internas de jQuery al procesar HTML sin filtrar permiten ejecución arbitraria de JavaScript incluso con librerías de sanitización.",
+                "summary": "jQuery internal regular expressions while processing unfiltered HTML allow arbitrary JavaScript execution even with sanitization libraries.",
                 "affected_versions": "< 3.5.0",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2020-11022",
                 "poc_url": "https://github.com/search?q=CVE-2020-11022+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2020-11022",
-                "remediation": "Actualizar a jQuery 3.7.1 o versión 3.5.0+"
+                "remediation": "Upgrade to jQuery 3.7.1 or version 3.5.0+"
             })
             vulns.append({
                 "cve": "CVE-2020-11023",
-                "title": "Evasión de Sanitización XSS en htmlPrefilter",
+                "title": "XSS Sanitization Bypass in htmlPrefilter",
                 "severity": "MEDIUM",
                 "cvss": 6.1,
                 "vector": "Cross-Site Scripting (XSS)",
-                "summary": "Fallo en jQuery.htmlPrefilter que reemplaza etiquetas cerradas de forma insegura permitiendo ejecución de código inyectado.",
+                "summary": "Flaw in jQuery.htmlPrefilter replaces closed tags insecurely, leading to injected code execution.",
                 "affected_versions": "< 3.5.0",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2020-11023",
                 "poc_url": "https://github.com/search?q=CVE-2020-11023+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2020-11023",
-                "remediation": "Actualizar a jQuery 3.7.1"
+                "remediation": "Upgrade to jQuery 3.7.1"
             })
 
         # jQuery < 3.4.0
         if parsed < (3, 4, 0):
             vulns.append({
                 "cve": "CVE-2019-11358",
-                "title": "Prototype Pollution en jQuery.extend",
+                "title": "Prototype Pollution in jQuery.extend",
                 "severity": "HIGH",
                 "cvss": 7.5,
                 "vector": "Prototype Pollution",
-                "summary": "Uso inseguro de Object.prototype en la función deep extend (jQuery.extend(true, {}, ...)) permite sobreescribir propiedades del prototipo global Object.",
+                "summary": "Insecure usage of Object.prototype in deep extend (jQuery.extend(true, {}, ...)) allows modifying the prototype of the global Object.",
                 "affected_versions": "< 3.4.0",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2019-11358",
                 "poc_url": "https://github.com/search?q=CVE-2019-11358+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2019-11358",
-                "remediation": "Actualizar a jQuery 3.4.0+"
+                "remediation": "Upgrade to jQuery 3.4.0+"
             })
 
         # jQuery < 3.0.0
         if parsed < (3, 0, 0):
             vulns.append({
                 "cve": "CVE-2015-9251",
-                "title": "Inyección Cross-Domain vía dataType: 'script'",
+                "title": "Cross-Domain Script Injection via dataType: 'script'",
                 "severity": "MEDIUM",
                 "cvss": 6.1,
                 "vector": "Cross-Site Scripting (XSS)",
-                "summary": "Las peticiones AJAX cross-domain sin especificar dataType ejecutan automáticamente respuestas que contengan cabeceras text/javascript.",
+                "summary": "Cross-domain AJAX requests without explicit dataType automatically execute responses containing text/javascript headers.",
                 "affected_versions": "< 3.0.0",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2015-9251",
                 "poc_url": "https://github.com/search?q=CVE-2015-9251+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2015-9251",
-                "remediation": "Actualizar a jQuery 3.0.0+"
+                "remediation": "Upgrade to jQuery 3.0.0+"
             })
 
         # jQuery < 1.9.0 (incluye 1.7.2)
         if parsed < (1, 9, 0):
             vulns.append({
                 "cve": "CVE-2012-6708",
-                "title": "Selector XSS en Función Central $()",
+                "title": "Selector XSS in Core $() Function",
                 "severity": "MEDIUM",
                 "cvss": 6.1,
                 "vector": "Cross-Site Scripting (XSS)",
-                "summary": "La función selectora de jQuery $(str) parsea cadenas que comienzan con caracteres hash o etiquetas como HTML en vez de selectores CSS si provienen de entrada de usuario sin sanitizar.",
+                "summary": "The jQuery $(str) selector function parses strings starting with hash characters or tags as HTML rather than CSS selectors if supplied from untrusted user input.",
                 "affected_versions": "< 1.9.0",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2012-6708",
                 "poc_url": "https://github.com/search?q=CVE-2012-6708+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2012-6708",
-                "remediation": "Actualizar urgentemente a rama moderna jQuery 3.x"
+                "remediation": "Upgrade urgently to modern jQuery 3.x branch"
             })
 
     # 2. BOOTSTRAP
@@ -122,29 +122,29 @@ def evaluate_technology_vulnerabilities(tech_name: str, version_str: Optional[st
         if parsed < (4, 3, 1) or (parsed[0] == 3 and parsed < (3, 4, 1)):
             vulns.append({
                 "cve": "CVE-2019-8331",
-                "title": "Cross-Site Scripting en Tooltip y Popover",
+                "title": "Cross-Site Scripting in Tooltip and Popover",
                 "severity": "MEDIUM",
                 "cvss": 6.1,
                 "vector": "Cross-Site Scripting (XSS)",
-                "summary": "Los plugins tooltip y popover de Bootstrap no sanitizan las opciones data-template y data-content antes de inyectarlas en el DOM.",
+                "summary": "Bootstrap tooltip and popover plugins do not sanitize data-template and data-content options before injecting them into the DOM.",
                 "affected_versions": "< 4.3.1 / < 3.4.1",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2019-8331",
                 "poc_url": "https://github.com/search?q=CVE-2019-8331+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2019-8331",
-                "remediation": "Actualizar a Bootstrap 4.3.1+ o 5.x"
+                "remediation": "Upgrade to Bootstrap 4.3.1+ or 5.x"
             })
             vulns.append({
                 "cve": "CVE-2018-14041",
-                "title": "XSS vía data-parent en Plugin Collapse",
+                "title": "XSS via data-parent in Collapse Plugin",
                 "severity": "MEDIUM",
                 "cvss": 6.1,
                 "vector": "Cross-Site Scripting (XSS)",
-                "summary": "Vulnerabilidad XSS en el atributo data-parent del componente Collapse de Bootstrap.",
+                "summary": "XSS vulnerability in the data-parent attribute of the Bootstrap Collapse component.",
                 "affected_versions": "< 4.1.2",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2018-14041",
                 "poc_url": "https://github.com/search?q=CVE-2018-14041+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2018-14041",
-                "remediation": "Actualizar a versión parcheada"
+                "remediation": "Upgrade to patched version (4.1.2+)"
             })
 
     # 3. LODASH
@@ -152,29 +152,29 @@ def evaluate_technology_vulnerabilities(tech_name: str, version_str: Optional[st
         if parsed < (4, 17, 21):
             vulns.append({
                 "cve": "CVE-2021-23337",
-                "title": "Inyección de Comandos en Función template",
+                "title": "Command Injection in template Function",
                 "severity": "HIGH",
                 "cvss": 7.2,
                 "vector": "Command Injection",
-                "summary": "Uso de fuentes no confiables en lodash.template permite inyección de código arbitrario.",
+                "summary": "Untrusted input in lodash.template allows arbitrary code injection.",
                 "affected_versions": "< 4.17.21",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2021-23337",
                 "poc_url": "https://github.com/search?q=CVE-2021-23337+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2021-23337",
-                "remediation": "Actualizar a Lodash 4.17.21+"
+                "remediation": "Upgrade to Lodash 4.17.21+"
             })
             vulns.append({
                 "cve": "CVE-2020-8203",
-                "title": "Prototype Pollution en zipObjectDeep",
+                "title": "Prototype Pollution in zipObjectDeep",
                 "severity": "HIGH",
                 "cvss": 7.4,
                 "vector": "Prototype Pollution",
-                "summary": "Prototype pollution en utilidades deep de asignación de objetos.",
+                "summary": "Prototype pollution in deep object assignment utilities.",
                 "affected_versions": "< 4.17.19",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2020-8203",
                 "poc_url": "https://github.com/search?q=CVE-2020-8203+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2020-8203",
-                "remediation": "Actualizar a Lodash 4.17.21+"
+                "remediation": "Upgrade to Lodash 4.17.21+"
             })
 
     # 4. WORDPRESS CORE
@@ -182,30 +182,30 @@ def evaluate_technology_vulnerabilities(tech_name: str, version_str: Optional[st
         if parsed < (6, 4, 2):
             vulns.append({
                 "cve": "CVE-2023-39999",
-                "title": "Cadena de Deserialización POP / Ejecución de Código",
+                "title": "POP Deserialization Chain / Code Execution",
                 "severity": "HIGH",
                 "cvss": 7.5,
                 "vector": "Object Injection / RCE",
-                "summary": "Cadena POP en WP_Theme que permite ejecución de código arbitrario en ciertas combinaciones de plugins con deserialización.",
+                "summary": "POP chain in WP_Theme allows arbitrary code execution in specific plugin combinations with deserialization.",
                 "affected_versions": "< 6.4.2",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2023-39999",
                 "poc_url": "https://github.com/search?q=CVE-2023-39999+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2023-39999",
-                "remediation": "Actualizar WordPress Core a versión 6.4.2 o 6.5+"
+                "remediation": "Upgrade WordPress Core to version 6.4.2 or 6.5+"
             })
         if parsed < (5, 8, 0):
             vulns.append({
                 "cve": "CVE-2021-29447",
-                "title": "Ataque XXE y Fuga de Archivos Arbitrarios vía WAV",
+                "title": "XXE Attack & Arbitrary File Leak via WAV Upload",
                 "severity": "HIGH",
                 "cvss": 7.5,
                 "vector": "XML External Entity (XXE)",
-                "summary": "Subida de archivos WAV en la biblioteca de medios permite leer archivos del servidor y SSRF.",
+                "summary": "WAV file uploads in the media library enable reading server files and triggering SSRF.",
                 "affected_versions": "5.6.0 - 5.7.1",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2021-29447",
                 "poc_url": "https://github.com/search?q=CVE-2021-29447+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2021-29447",
-                "remediation": "Actualizar WordPress Core"
+                "remediation": "Upgrade WordPress Core to 5.8+"
             })
 
     # 5. APACHE HTTP SERVER
@@ -213,43 +213,43 @@ def evaluate_technology_vulnerabilities(tech_name: str, version_str: Optional[st
         if parsed in ((2, 4, 49), (2, 4, 50)):
             vulns.append({
                 "cve": "CVE-2021-41773",
-                "title": "Path Traversal & RCE en Apache HTTP Server",
+                "title": "Path Traversal & RCE in Apache HTTP Server",
                 "severity": "CRITICAL",
                 "cvss": 7.5,
                 "vector": "Path Traversal / Remote Code Execution",
-                "summary": "Fallo en la normalización de rutas permite recorrer el sistema de archivos (/cgi-bin/.%2e/.%2e/) y ejecutar binarios como /bin/sh.",
+                "summary": "Flaw in path normalization allows mapping URLs outside docroot (/cgi-bin/.%2e/.%2e/) and executing binaries such as /bin/sh.",
                 "affected_versions": "2.4.49",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2021-41773",
                 "poc_url": "https://github.com/search?q=CVE-2021-41773+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2021-41773",
-                "remediation": "Actualizar inmediatamente a Apache 2.4.51 o superior"
+                "remediation": "Upgrade immediately to Apache 2.4.51 or higher"
             })
             vulns.append({
                 "cve": "CVE-2021-42013",
-                "title": "Bypass de Parche CVE-2021-41773 con RCE Crítico",
+                "title": "Patch Bypass for CVE-2021-41773 with Critical RCE",
                 "severity": "CRITICAL",
                 "cvss": 9.8,
                 "vector": "Remote Code Execution (RCE)",
-                "summary": "Parche incompleto de CVE-2021-41773 permite ejecución de código remoto mediante doble codificación URL (%%32%65).",
+                "summary": "Incomplete patch for CVE-2021-41773 allows remote code execution via double URL encoding (%%32%65).",
                 "affected_versions": "2.4.49, 2.4.50",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2021-42013",
                 "poc_url": "https://github.com/search?q=CVE-2021-42013+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2021-42013",
-                "remediation": "Actualizar a Apache 2.4.51+"
+                "remediation": "Upgrade to Apache 2.4.51+"
             })
         elif parsed < (2, 4, 53):
             vulns.append({
                 "cve": "CVE-2022-22720",
-                "title": "HTTP Request Smuggling en Apache",
+                "title": "HTTP Request Smuggling in Apache",
                 "severity": "CRITICAL",
                 "cvss": 9.8,
                 "vector": "HTTP Request Smuggling",
-                "summary": "Desbordamiento de entero al procesar peticiones con tamaños masivos en mod_reqtimeout.",
+                "summary": "Integer overflow when processing requests with massive sizes in mod_reqtimeout.",
                 "affected_versions": "< 2.4.53",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2022-22720",
                 "poc_url": "https://github.com/search?q=CVE-2022-22720+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2022-22720",
-                "remediation": "Actualizar a Apache 2.4.53+"
+                "remediation": "Upgrade to Apache 2.4.53+"
             })
 
     # 6. NGINX
@@ -257,16 +257,16 @@ def evaluate_technology_vulnerabilities(tech_name: str, version_str: Optional[st
         if parsed < (1, 20, 1):
             vulns.append({
                 "cve": "CVE-2021-23017",
-                "title": "Corrupción de Memoria de 1-byte en Resolver DNS",
+                "title": "1-byte Memory Corruption in DNS Resolver",
                 "severity": "HIGH",
                 "cvss": 7.7,
                 "vector": "Buffer Overflow / Memory Corruption",
-                "summary": "Fallo en el módulo resolver de Nginx al procesar respuestas DNS maliciosas permitiendo ejecución de código o DoS.",
+                "summary": "Off-by-one bug in Nginx resolver module while processing malicious DNS responses, leading to code execution or DoS.",
                 "affected_versions": "0.6.18 - 1.20.0",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2021-23017",
                 "poc_url": "https://github.com/search?q=CVE-2021-23017+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2021-23017",
-                "remediation": "Actualizar a Nginx 1.20.1+ o 1.22+"
+                "remediation": "Upgrade to Nginx 1.20.1+ or 1.22+"
             })
 
     # 7. PHP
@@ -274,16 +274,16 @@ def evaluate_technology_vulnerabilities(tech_name: str, version_str: Optional[st
         if parsed < (8, 0, 0):
             vulns.append({
                 "cve": "CVE-2019-11043",
-                "title": "Remote Code Execution en php-fpm (Nginx)",
+                "title": "Remote Code Execution in php-fpm (Nginx)",
                 "severity": "CRITICAL",
                 "cvss": 9.8,
                 "vector": "Remote Code Execution (RCE)",
-                "summary": "Desbordamiento en env_path_info en php-fpm que permite a atacantes remotos ejecutar código arbitrario enviando URLs especialmente manipuladas.",
+                "summary": "Buffer underflow in env_path_info in php-fpm allowing remote attackers to execute arbitrary code via crafted URLs.",
                 "affected_versions": "PHP 7.1.x < 7.1.33, 7.2.x < 7.2.24, 7.3.x < 7.3.11",
                 "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2019-11043",
                 "poc_url": "https://github.com/search?q=CVE-2019-11043+poc&type=repositories",
                 "exploitdb_url": "https://www.exploit-db.com/search?cve=2019-11043",
-                "remediation": "Actualizar urgentemente a rama soportada PHP 8.2+"
+                "remediation": "Upgrade urgently to supported PHP 8.2+ branch"
             })
 
     # Asociar metadatos técnicos comunes y fuentes de exploits verificadas

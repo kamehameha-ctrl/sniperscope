@@ -85,14 +85,14 @@ def _verify_session_token(token: Optional[str]) -> str:
     if not expected_user:
         return "operator"
     if not token or ":" not in token:
-        raise HTTPException(status_code=401, detail="Sesión no autenticada. Inicia sesión en SniperScope.")
+        raise HTTPException(status_code=401, detail="Unauthenticated session. Please log in to SniperScope.")
     user_part, sig_part = token.split(":", 1)
     expected_sig = hmac.new(_get_auth_secret(), user_part.encode("utf-8"), hashlib.sha256).hexdigest()
     if not (
         hmac.compare_digest(user_part.encode("utf-8"), expected_user.encode("utf-8"))
         and hmac.compare_digest(sig_part.encode("utf-8"), expected_sig.encode("utf-8"))
     ):
-        raise HTTPException(status_code=401, detail="Token de sesión inválido o expirado.")
+        raise HTTPException(status_code=401, detail="Invalid or expired session token.")
     return user_part
 
 
@@ -160,8 +160,8 @@ def _evaluate_risk_and_findings(
         score += 40
         findings.append({
             "severity": "CRITICAL",
-            "title": f"Exposición Crítica de Archivos Sensibles ({', '.join(crit_paths)})",
-            "detail": "Se detectó acceso público a repositorios o archivos de configuración sensibles en el servidor web."
+            "title": f"Critical Exposure of Sensitive Files ({', '.join(crit_paths)})",
+            "detail": "Public access detected to repository or sensitive configuration files on the web server."
         })
 
     # 2. CISA KEV
@@ -169,8 +169,8 @@ def _evaluate_risk_and_findings(
         score += 35
         findings.append({
             "severity": "CRITICAL",
-            "title": f"{len(kev_vulns)} Vulnerabilidad(es) en Catálogo CISA KEV (Explotación Activa)",
-            "detail": f"Se detectaron CVEs explotadas activamente in-the-wild: {', '.join(v['cve'] for v in kev_vulns[:5])}."
+            "title": f"{len(kev_vulns)} Vulnerability(ies) in CISA KEV Catalog (Active Exploitation)",
+            "detail": f"Actively exploited in-the-wild CVEs detected: {', '.join(v['cve'] for v in kev_vulns[:5])}."
         })
 
     # 3. Ransomware
@@ -178,8 +178,8 @@ def _evaluate_risk_and_findings(
         score += 15
         findings.append({
             "severity": "CRITICAL",
-            "title": "Exposición a Vectores de Ransomware Documentados",
-            "detail": f"Al menos {len(ransom_vulns)} CVE(s) están asociadas a campañas de ransomware."
+            "title": "Exposure to Documented Ransomware Vectors",
+            "detail": f"At least {len(ransom_vulns)} CVE(s) are associated with ransomware campaigns."
         })
 
     # 4. CVEs Críticas
@@ -187,8 +187,8 @@ def _evaluate_risk_and_findings(
         score += min(35, len(crit_vulns) * 8)
         findings.append({
             "severity": "CRITICAL",
-            "title": f"{len(crit_vulns)} Vulnerabilidad(es) de Severidad CRÍTICA (CVSS >= 9.0)",
-            "detail": f"Máximo CVSS detectado: {max((v.get('cvss') or 9.0) for v in crit_vulns)} en {crit_vulns[0].get('service', 'servicios expuestos')}."
+            "title": f"{len(crit_vulns)} CRITICAL Severity Vulnerability(ies) (CVSS >= 9.0)",
+            "detail": f"Max detected CVSS: {max((v.get('cvss') or 9.0) for v in crit_vulns)} in {crit_vulns[0].get('service', 'exposed services')}."
         })
 
     if high_vulns:
@@ -209,8 +209,8 @@ def _evaluate_risk_and_findings(
         score += 12
         findings.append({
             "severity": "HIGH",
-            "title": "Servicios de Administración / Bases de Datos Expuestos a Internet",
-            "detail": f"Puertos sensibles accesibles públicamente: {', '.join(exposed_admin[:6])}."
+            "title": "Administrative / Database Services Exposed to Internet",
+            "detail": f"Sensitive ports publicly accessible: {', '.join(exposed_admin[:6])}."
         })
 
     # 6. Fugas de versión en cabeceras HTTP
@@ -218,8 +218,8 @@ def _evaluate_risk_and_findings(
         score += 5
         findings.append({
             "severity": "MEDIUM",
-            "title": f"Divulgación de Versión Exacta en Cabecera Web ({http_res['server']})",
-            "detail": "El servidor web revela su versión exacta, facilitando el fingerprinting automatizado de exploits."
+            "title": f"Exact Version Disclosure in Web Header ({http_res['server']})",
+            "detail": "The web server reveals its exact version, enabling automated exploit fingerprinting."
         })
 
     # 7. CORS Permisivo y Cookies Inseguras
@@ -227,8 +227,8 @@ def _evaluate_risk_and_findings(
         score += 6
         findings.append({
             "severity": "MEDIUM",
-            "title": f"Política CORS Permisiva Detectada (Access-Control-Allow-Origin: {http_res['cors_policy']})",
-            "detail": "El servidor permite peticiones cross-origin desde orígenes arbitrarios."
+            "title": f"Permissive CORS Policy Detected (Access-Control-Allow-Origin: {http_res['cors_policy']})",
+            "detail": "The server allows cross-origin requests from arbitrary origins."
         })
 
     insecure_cookies = [c["name"] for c in http_res.get("cookies_audit", []) if not c.get("safe")]
@@ -236,8 +236,8 @@ def _evaluate_risk_and_findings(
         score += 5
         findings.append({
             "severity": "MEDIUM",
-            "title": f"Cookies sin Flags de Seguridad HttpOnly/Secure ({', '.join(insecure_cookies[:4])})",
-            "detail": "Las cookies emitidas carecen de banderas de protección frente a robo por XSS o interceptación en tránsito."
+            "title": f"Cookies Lacking HttpOnly/Secure Security Flags ({', '.join(insecure_cookies[:4])})",
+            "detail": "Issued cookies lack protective flags against XSS theft or in-transit interception."
         })
 
     # 8. Cabeceras de seguridad web ausentes
@@ -246,8 +246,8 @@ def _evaluate_risk_and_findings(
         score += 6
         findings.append({
             "severity": "MEDIUM",
-            "title": f"{len(missing_headers)} Cabeceras de Seguridad HTTP Ausentes",
-            "detail": f"No se detectaron: {', '.join(missing_headers)}."
+            "title": f"{len(missing_headers)} Missing HTTP Security Headers",
+            "detail": f"Not detected: {', '.join(missing_headers)}."
         })
 
     # 9. Seguridad de correo SPF / DMARC
@@ -261,15 +261,15 @@ def _evaluate_risk_and_findings(
             missing_mail.append("DMARC")
         findings.append({
             "severity": "MEDIUM",
-            "title": f"Riesgo de Suplantación de Dominio de Correo (Falta {' y '.join(missing_mail)})",
-            "detail": "El dominio carece de políticas completas contra Email Spoofing y Phishing."
+            "title": f"Email Domain Spoofing Risk (Missing {' & '.join(missing_mail)})",
+            "detail": "The domain lacks complete policies against email spoofing and phishing."
         })
     elif email_sec.get("dmarc_policy") == "none":
         score += 6
         findings.append({
             "severity": "MEDIUM",
-            "title": "Política DMARC Permisiva (p=none - Vulnerable a Phishing/Spoofing)",
-            "detail": "DMARC está configurado en modo monitor p=none sin bloquear ni enviar a cuarentena correos con remitente falsificado."
+            "title": "Permissive DMARC Policy (p=none - Vulnerable to Phishing/Spoofing)",
+            "detail": "DMARC is configured in monitor mode p=none without blocking or quarantining forged sender emails."
         })
 
     # 10. Vulnerabilidades Críticas en Componentes Web / JavaScript (SCA)
@@ -278,21 +278,21 @@ def _evaluate_risk_and_findings(
         score += min(25, len(sca_findings) * 5)
         findings.append({
             "severity": "HIGH",
-            "title": f"{len(sca_findings)} Vulnerabilidad(es) en Componentes Web (SCA / XSS / Prototype Pollution)",
-            "detail": f"Se identificaron tecnologías desactualizadas con fallos de seguridad documentados: {', '.join(set(v.get('service', '') for v in sca_findings[:3]))}."
+            "title": f"{len(sca_findings)} Web Component Vulnerability(ies) (SCA / XSS / Prototype Pollution)",
+            "detail": f"Outdated technologies with documented security flaws identified: {', '.join(set(v.get('service', '') for v in sca_findings[:3]))}."
         })
 
     final_score = min(100, score)
     if final_score >= 75:
-        grade, level = "F", "CRÍTICO"
+        grade, level = "F", "CRITICAL"
     elif final_score >= 50:
-        grade, level = "D", "ALTO"
+        grade, level = "D", "HIGH"
     elif final_score >= 25:
-        grade, level = "C", "MEDIO"
+        grade, level = "C", "MEDIUM"
     elif final_score >= 10:
-        grade, level = "B", "BAJO"
+        grade, level = "B", "LOW"
     else:
-        grade, level = "A", "ÓPTIMO"
+        grade, level = "A", "OPTIMAL"
 
     return {
         "score": final_score,
@@ -319,7 +319,7 @@ def _build_execution_trace(
     clean_shodan: List[Dict[str, Any]],
     cve_list: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """Construye el registro paso a paso (comando a comando / petición por petición) para el modo RAW."""
+    """Build step-by-step trace (command-by-command / request-by-request) for the RAW trace."""
     trace: List[Dict[str, Any]] = []
     step_idx = 1
 
@@ -327,10 +327,10 @@ def _build_execution_trace(
         "step": f"{step_idx:02d}",
         "timestamp": t_init,
         "phase": "TARGET_INITIALIZATION",
-        "title": "Sanitización, Modo OPSEC y Clasificación del Objetivo",
+        "title": "Target Sanitization, OPSEC Profile & Classification",
         "command": f"sniperscope --init --target {clean_host} --mode {scan_mode}",
         "request": f"Internal Parser -> Input='{clean_host}' | Mode='{scan_mode.upper()}' | Type={'IP_HOST' if is_direct_ip else 'DOMAIN_NAME'}",
-        "reasoning": "Se normaliza el objetivo eliminando esquemas/rutas y se configura el perfil OPSEC (Pasivo Stealth vs Activo Autorizado).",
+        "reasoning": "Target is normalized by stripping URI schemes and paths, configuring the OPSEC profile (Passive Stealth vs Authorized Active).",
         "raw_output": json.dumps({
             "normalized_target": clean_host,
             "scan_mode": scan_mode,
@@ -346,10 +346,10 @@ def _build_execution_trace(
             "step": f"{step_idx:02d}",
             "timestamp": t_dns,
             "phase": "DNS_ZONE_RECON",
-            "title": "Resolución de Registros DNS y Políticas Anti-Spoofing (SPF/DMARC)",
+            "title": "DNS Zone Resolution & Email Anti-Spoofing Audit (SPF/DMARC)",
             "command": f"dig +nocmd {clean_host} A AAAA MX NS TXT SOA CNAME +noall +answer && dig +short TXT _dmarc.{clean_host}",
             "request": f"DNS Standard Queries (UDP/53) -> qname={clean_host}, qtypes=[A, AAAA, MX, NS, TXT, SOA, CNAME] & qname=_dmarc.{clean_host}",
-            "reasoning": "Se interrogan los servidores DNS para descubrir las direcciones IPv4/IPv6 que alimentan de inmediato el escáner Shodan y auditar las políticas de correo.",
+            "reasoning": "Queries DNS recursive/authoritative servers to uncover IPv4/IPv6 addresses for Shodan recon and audit email security policies.",
             "raw_output": json.dumps(dns_res, indent=2, ensure_ascii=False)
         })
         step_idx += 1
@@ -358,10 +358,10 @@ def _build_execution_trace(
             "step": f"{step_idx:02d}",
             "timestamp": t_discovery,
             "phase": "CT_LOGS_SUBDOMAINS",
-            "title": "Enumeración Pasiva de Subdominios (crt.sh) y Resolución de Origin IPs",
+            "title": "Passive Subdomain Enumeration (crt.sh) & Origin IP Resolution",
             "command": f"curl -s 'https://crt.sh/?q=%.{clean_host}&output=json' | jq -r '.[].name_value' | sort -u",
             "request": f"HTTP GET https://crt.sh/?q=%25.{clean_host}&output=json + Async DNS A Resolution",
-            "reasoning": "Se consultan los registros de transparencia de certificados SSL y se resuelven sus IPs para detectar activos secundarios o servidores de origen fuera del WAF.",
+            "reasoning": "Queries SSL/TLS Certificate Transparency logs to discover perimeter subdomains and resolves their IPs to uncover origin servers behind WAFs.",
             "raw_output": json.dumps({
                 "subdomains_discovered_count": len(subdomains),
                 "subdomains_resolved": subdomain_ips,
@@ -375,10 +375,10 @@ def _build_execution_trace(
         "step": f"{step_idx:02d}",
         "timestamp": t_discovery,
         "phase": "RDAP_WHOIS_LOOKUP",
-        "title": "Consulta de Registro Oficial WHOIS / RDAP",
+        "title": "Official WHOIS / RDAP Registry Query",
         "command": f"curl -s -L '{rdap_url}'",
         "request": f"HTTP GET {rdap_url}",
-        "reasoning": "Se consulta el protocolo RDAP para extraer el registrador, fechas de vigencia y servidores de nombres autoritativos.",
+        "reasoning": "Queries the Registration Data Access Protocol (RDAP) to extract registrar entity, registration/expiration timestamps, and authoritative nameservers.",
         "raw_output": json.dumps(rdap_res, indent=2, ensure_ascii=False)
     })
     step_idx += 1
@@ -388,10 +388,10 @@ def _build_execution_trace(
         "step": f"{step_idx:02d}",
         "timestamp": t_discovery,
         "phase": "TLS_CRYPTO_HANDSHAKE",
-        "title": "Handshake TLS/SSL e Inspección del Certificado X.509 (Puerto 443)",
+        "title": "TLS/SSL Handshake & X.509 Certificate Inspection (Port 443)",
         "command": f"openssl s_client -connect {clean_host}:443 -servername {clean_host} -showcerts </dev/null",
         "request": f"TCP/TLS Handshake -> {clean_host}:443 (SNI={clean_host})",
-        "reasoning": "Se negocia una conexión TLS directa al puerto 443 para extraer versión TLS, suite de cifrado, autoridad certificadora (CA), caducidad y nombres alternativos (SANs).",
+        "reasoning": "Negotiates direct TLS handshake on port 443 to inspect protocol version, cipher suite, Certificate Authority (CA), validity window, and Subject Alternative Names (SANs).",
         "raw_output": json.dumps(tls_data, indent=2, ensure_ascii=False)
     })
     step_idx += 1
@@ -411,10 +411,10 @@ def _build_execution_trace(
         "step": f"{step_idx:02d}",
         "timestamp": t_discovery,
         "phase": f"HTTP_SECURITY_AUDIT ({scan_mode.upper()})",
-        "title": "Inspección HTTP/HTTPS, Cabeceras, Cookies, CORS y WAF",
+        "title": "HTTP/HTTPS Inspection, Security Headers, Cookies, CORS & WAF",
         "command": http_cmd,
         "request": http_req_desc,
-        "reasoning": "Se analizan las cabeceras HTTP crudas, banderas de cookies, políticas CORS y presencia de WAF/CDN respetando el modo OPSEC seleccionado.",
+        "reasoning": "Audits raw HTTP headers, cookie security flags (Secure, HttpOnly, SameSite), CORS policy, and WAF/CDN presence adhering strictly to the OPSEC mode.",
         "raw_output": json.dumps({
             "scan_mode": scan_mode,
             "via_proxy": http_res.get("via_proxy", False),
@@ -438,10 +438,10 @@ def _build_execution_trace(
             "step": f"{step_idx:02d}",
             "timestamp": t_shodan,
             "phase": f"SHODAN_HOST_RECON ({ip_addr})",
-            "title": f"Reconocimiento de Infraestructura, Puertos y Banners en Shodan para IP {ip_addr}",
+            "title": f"Infrastructure, Open Ports & Banner Recon on Shodan for IP {ip_addr}",
             "command": f"shodan host {ip_addr} && curl -s 'https://internetdb.shodan.io/{ip_addr}'",
             "request": f"HTTP GET https://api.shodan.io/shodan/host/{ip_addr}?key=[REDACTED] & GET https://internetdb.shodan.io/{ip_addr}",
-            "reasoning": f"Para la IP {ip_addr}, se interroga Shodan API e InternetDB (100% pasivo, sin enviar paquetes al objetivo) para obtener puertos abiertos, versiones, CPEs y banners.",
+            "reasoning": f"For IP {ip_addr}, queries Shodan API and InternetDB (100% passive, sending zero packets to target) to discover open ports, software versions, CPEs, and banners.",
             "raw_output": json.dumps({
                 "ip": ip_addr,
                 "source": h.get("source"),
@@ -464,10 +464,10 @@ def _build_execution_trace(
             "step": f"{step_idx:02d}",
             "timestamp": t_cvedb,
             "phase": "SHODAN_CVEDB_ENRICHMENT",
-            "title": f"Enriquecimiento de {len(cve_list)} Vulnerabilidades en Shodan CVEDB (CVSS, EPSS y CISA KEV)",
+            "title": f"Enrichment of {len(cve_list)} Vulnerabilities via Shodan CVEDB (CVSS, EPSS & CISA KEV)",
             "command": f"for cve in {' '.join(v['cve'] for v in cve_list[:6])} ...; do curl -s \"https://cvedb.shodan.io/cve/$cve\"; done",
-            "request": f"Async HTTP GET https://cvedb.shodan.io/cve/{{CVE_ID}} ({len(cve_list)} peticiones concurrentes, ej: /cve/{sample_cve})",
-            "reasoning": "Se cruzan todos los CVEs detectados contra Shodan CVEDB para extraer su descripción técnica, puntuación CVSS, probabilidad EPSS y estado de explotación activa en CISA KEV.",
+            "request": f"Async HTTP GET https://cvedb.shodan.io/cve/{{CVE_ID}} ({len(cve_list)} concurrent requests, e.g. /cve/{sample_cve})",
+            "reasoning": "Cross-references all discovered CVE identifiers against Shodan CVEDB to extract technical descriptions, CVSS vectors, EPSS exploitation probability, and CISA KEV status.",
             "raw_output": json.dumps(cve_list, indent=2, ensure_ascii=False)
         })
 
@@ -481,7 +481,7 @@ async def login_operator(payload: LoginRequest):
     expected_user = os.getenv("SNIPERSCOPE_USER", "")
     expected_pass = os.getenv("SNIPERSCOPE_PASS", "")
     if not expected_user or not expected_pass:
-        raise HTTPException(status_code=500, detail="Credenciales de operador no configuradas en backend/.env")
+        raise HTTPException(status_code=500, detail="Operator credentials not configured in backend/.env")
 
     user_ok = hmac.compare_digest(
         payload.username.strip().encode("utf-8"),
@@ -492,7 +492,7 @@ async def login_operator(payload: LoginRequest):
         expected_pass.encode("utf-8"),
     )
     if not (user_ok and pass_ok):
-        raise HTTPException(status_code=401, detail="Credenciales de operador incorrectas")
+        raise HTTPException(status_code=401, detail="Invalid operator credentials")
 
     token = _create_session_token(expected_user)
     proxy_val = os.getenv("OUTBOUND_PROXY", "").strip()
@@ -541,7 +541,7 @@ async def shodan_status(_operator: str = Depends(require_operator_auth)):
             "configured": False,
             "proxy_configured": bool(proxy_val),
             "proxy_active": proxy_online,
-            "message": "Clave de Shodan no configurada",
+            "message": "Shodan API key not configured",
         }
     try:
         loop = asyncio.get_running_loop()
@@ -592,7 +592,7 @@ async def scan_target(
     t_init = _now_utc_ms()
     clean_host = _clean_target(target)
     if not clean_host:
-        raise HTTPException(status_code=400, detail="Objetivo inválido o vacío")
+        raise HTTPException(status_code=400, detail="Invalid or empty target")
 
     scan_mode = "active" if mode.lower() == "active" else "passive"
     cache_key = f"{clean_host}::{scan_mode}"
