@@ -12,7 +12,10 @@ def _parse_version(version_str: Optional[str]) -> Optional[Tuple[int, ...]]:
     """Convierte una cadena de versión '1.7.2' o 'v2.4.49' en una tupla de enteros (1, 7, 2)."""
     if not version_str:
         return None
-    cleaned = re.sub(r'^[^\d]*', '', version_str.strip())
+    low = version_str.lower()
+    if any(k in low for k in ("oculta", "server_tokens", "prod", "zero-js", "hardened", "none")):
+        return None
+    cleaned = re.sub(r'^[^\d]*', '', version_str.replace("~", "").strip())
     # Extraer los primeros 3 números
     parts = re.findall(r'\d+', cleaned)
     if not parts:

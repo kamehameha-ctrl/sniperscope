@@ -105,3 +105,96 @@ export async function checkShodanStatus() {
   }
   return { configured: false, message: 'Backend no disponible' };
 }
+
+export async function fetchSherlockSites() {
+  const response = await fetch('/api/sherlock/sites', {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error('Error al obtener catálogo de plataformas SOCMINT');
+  }
+  return response.json();
+}
+
+/**
+ * Escucha el stream SSE de Sherlock para descubrimiento en tiempo real.
+ * Retorna una función de cancelación (AbortController.abort).
+ */
+export function startSherlockStream(username, category, { onInit, onProgress, onComplete, onError }) {
+  const controller = new AbortController();
+  const token = getAuthToken();
+  const catParam = category && category !== 'Todos' ? `&category=${encodeURIComponent(category)}` : '';
+  const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+  const url = `/api/sherlock/stream/${encodeURIComponent(username)}?${catParam}${tokenParam}`;
+
+  (async () => {
+    try {
+      const response = await fetch(url, {
+        headers: getAuthHeaders({ Accept: 'text/event-stream' }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Error HTTP ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(trimmed.slice(6));
+              if (data.event === 'init' && onInit) onInit(data);
+              else if (data.event === 'progress' && onProgress) onProgress(data);
+              else if (data.event === 'complete' && onComplete) onComplete(data);
+              else if (data.event === 'error' && onError) onError(new Error(data.message));
+            } catch {
+              // Ignore malformed chunk
+            }
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError' && onError) {
+        onError(err);
+      }
+    }
+  })();
+
+  return () => controller.abort();
+}
+
+export async function fetchPhoneOsint(phoneNumber) {
+  const response = await fetch(`/api/osint/phone/${encodeURIComponent(phoneNumber)}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Error al analizar teléfono (${response.status})`);
+  }
+  return response.json();
+}
+
+export async function fetchEmailOsint(emailAddress) {
+  const response = await fetch(`/api/osint/email/${encodeURIComponent(emailAddress)}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Error al analizar correo electrónico (${response.status})`);
+  }
+  return response.json();
+}
+

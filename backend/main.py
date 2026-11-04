@@ -21,6 +21,7 @@ if str(backend_dir) not in sys.path:
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from fastapi import FastAPI, Query, HTTPException, Header, Depends
+from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from shodan import Shodan
 
@@ -35,6 +36,10 @@ from services.http_scanner import inspect_http_headers, is_proxy_reachable
 from services.shodan_scanner import query_shodan_ip
 from services.cve_enricher import enrich_cve_dictionary
 from services.graph_builder import build_attack_surface_graph
+from services.sherlock_data import SITES_DATABASE, CATEGORIES
+from services.sherlock_engine import stream_sherlock_scan, validate_username
+from services.phone_osint import analyze_phone_number
+from services.email_osint import analyze_email_address
 
 app = FastAPI(
     title="SniperScope EASM & Forensic API",
@@ -782,3 +787,77 @@ async def scan_target(
     _SCAN_CACHE[cache_key] = (time.time(), result)
 
     return result
+
+
+@app.get("/sherlock")
+async def sherlock_entrypoint():
+    """Redirige directamente a la estación de trabajo Sherlock en el frontend."""
+    return RedirectResponse(url="http://localhost:5173/sherlock", status_code=307)
+
+
+@app.get("/api/sherlock/sites")
+async def get_sherlock_sites(
+    _operator: str = Depends(require_operator_auth),
+):
+    """Devuelve las categorías disponibles y el catálogo de plataformas soportadas."""
+    return {
+        "total": len(SITES_DATABASE),
+        "categories": CATEGORIES,
+        "sites": [
+            {
+                "name": s["name"],
+                "category": s.get("category", "General"),
+                "icon": s.get("icon", "globe")
+            }
+            for s in SITES_DATABASE
+        ]
+    }
+
+
+@app.get("/api/sherlock/stream/{username}")
+async def sherlock_stream(
+    username: str,
+    category: Optional[str] = Query(None, description="Filtrar por categoría (ej. 'Coding & Dev')"),
+    token: Optional[str] = Query(None, description="Token de sesión opcional para EventSource"),
+    x_sniperscope_token: Optional[str] = Header(default=None, alias="X-SniperScope-Token"),
+):
+    """Transmite resultados SOCMINT en tiempo real mediante Server-Sent Events (SSE)."""
+    auth_token = x_sniperscope_token or token
+    _verify_session_token(auth_token)
+
+    outbound_proxy = os.getenv("OUTBOUND_PROXY_URL")
+
+    async def event_generator():
+        async for evt in stream_sherlock_scan(username=username, category=category, outbound_proxy=outbound_proxy):
+            yield f"data: {json.dumps(evt, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+@app.get("/api/osint/phone/{phone_number}")
+async def get_phone_osint(
+    phone_number: str,
+    _operator: str = Depends(require_operator_auth),
+):
+    """Analiza un número de teléfono con inteligencia forense, CNMC España, Listaspam y Dorks PhoneInfoga."""
+    result = analyze_phone_number(phone_number)
+    return result
+
+
+@app.get("/api/osint/email/{email_address}")
+async def get_email_osint(
+    email_address: str,
+    _operator: str = Depends(require_operator_auth),
+):
+    """Analiza una dirección de correo con inteligencia de dominios, MX/SPF, Gravatar, Epieos y Dorks."""
+    result = await analyze_email_address(email_address)
+    return result
+

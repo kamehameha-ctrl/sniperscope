@@ -145,6 +145,7 @@ export default function IntelDossier({
   const [cveFilter, setCveFilter] = useState('');
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [activeSection, setActiveSection] = useState('all');
+  const [activeCliTab, setActiveCliTab] = useState('all');
 
   if (!scanData) {
     return (
@@ -488,6 +489,49 @@ export default function IntelDossier({
                     </div>
 
                     <div className="flex items-center space-x-2">
+                      {/* Enlaces rápidos a Threat Intel para la IP */}
+                      <div className="hidden sm:flex items-center space-x-1 font-mono text-[10px]">
+                        <a
+                          href={`https://www.virustotal.com/gui/ip-address/${host.ip}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Analizar reputación IP en VirusTotal"
+                          className="px-1.5 py-0.5 bg-[#121824] hover:bg-[#1f293d] text-slate-400 hover:text-[#38bdf8] border border-[#1e2638] rounded transition-colors inline-flex items-center space-x-0.5"
+                        >
+                          <span>VT</span>
+                          <ExternalLink size={8} />
+                        </a>
+                        <a
+                          href={`https://www.abuseipdb.com/check/${host.ip}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Comprobar reportes de abuso en AbuseIPDB"
+                          className="px-1.5 py-0.5 bg-[#121824] hover:bg-[#1f293d] text-slate-400 hover:text-[#fb923c] border border-[#1e2638] rounded transition-colors inline-flex items-center space-x-0.5"
+                        >
+                          <span>AbuseIP</span>
+                          <ExternalLink size={8} />
+                        </a>
+                        <a
+                          href={`https://www.shodan.io/host/${host.ip}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Ficha del host en Shodan"
+                          className="px-1.5 py-0.5 bg-[#121824] hover:bg-[#1f293d] text-slate-400 hover:text-[#f87171] border border-[#1e2638] rounded transition-colors inline-flex items-center space-x-0.5"
+                        >
+                          <span>Shodan</span>
+                          <ExternalLink size={8} />
+                        </a>
+                        <a
+                          href={`https://otx.alienvault.com/indicator/ip/${host.ip}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Indicadores de compromiso en AlienVault OTX"
+                          className="px-1.5 py-0.5 bg-[#121824] hover:bg-[#1f293d] text-slate-400 hover:text-[#a78bfa] border border-[#1e2638] rounded transition-colors inline-flex items-center space-x-0.5"
+                        >
+                          <span>OTX</span>
+                          <ExternalLink size={8} />
+                        </a>
+                      </div>
                       <span className="text-[10px] text-slate-500">{host.source}</span>
                       <button
                         onClick={() => onFocusNode && onFocusNode(`ip_${host.ip}`)}
@@ -745,42 +789,65 @@ export default function IntelDossier({
                     )}
 
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px]">
-                      <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
                         <a
-                          href={v.nvd_url}
+                          href={v.packetstorm_url || (v.cve && `https://packetstormsecurity.com/search/?q=${encodeURIComponent(v.cve)}`)}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Exploits y advisories en Packet Storm Security"
+                          className="inline-flex items-center space-x-1 px-2 py-0.5 bg-[#2d0f14] hover:bg-[#3d141b] text-[#f87171] border border-[#991b1b] rounded text-[10px] font-bold transition-colors"
+                        >
+                          <span>PacketStorm</span>
+                          <ExternalLink size={9} />
+                        </a>
+                        <a
+                          href={v.exploitdb_url || (v.cve && `https://www.exploit-db.com/search?cve=${encodeURIComponent(String(v.cve).replace('CVE-', ''))}`)}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Buscar en archivo Exploit-DB (OffSec)"
+                          className="inline-flex items-center space-x-1 px-2 py-0.5 bg-[#2e190e] hover:bg-[#3d2213] text-[#fb923c] border border-[#9a3412] rounded text-[10px] font-bold transition-colors"
+                        >
+                          <span>Exploit-DB</span>
+                          <ExternalLink size={9} />
+                        </a>
+                        <a
+                          href={v.vulners_url || (v.cve && `https://vulners.com/search?query=${encodeURIComponent(v.cve)}`)}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Correlación de vulnerabilidades y exploits en Vulners"
+                          className="inline-flex items-center space-x-1 px-2 py-0.5 bg-[#2b2108] hover:bg-[#3d2f0b] text-[#facc15] border border-[#854d0e] rounded text-[10px] transition-colors"
+                        >
+                          <span>Vulners</span>
+                          <ExternalLink size={9} />
+                        </a>
+                        <a
+                          href={v.nvd_url || (v.cve && `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(v.cve)}`)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center space-x-1 text-[#38bdf8] hover:underline"
                         >
                           <span>NIST NVD</span>
-                          <ExternalLink size={11} />
+                          <ExternalLink size={10} />
                         </a>
+                        {v.github_poc_url && (
+                          <a
+                            href={v.github_poc_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center space-x-1 text-slate-400 hover:text-white"
+                          >
+                            <span>GitHub</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        )}
                         <a
-                          href={v.exploitdb_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center space-x-1 text-[#fb923c] hover:underline"
-                        >
-                          <span>Exploit-DB</span>
-                          <ExternalLink size={11} />
-                        </a>
-                        <a
-                          href={v.github_poc_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center space-x-1 text-[#10b981] hover:underline"
-                        >
-                          <span>GitHub PoCs</span>
-                          <ExternalLink size={11} />
-                        </a>
-                        <a
-                          href={v.mitre_url}
+                          href={v.mitre_url || (v.cve && `https://cve.mitre.org/cgi-bin/cvename.cgi?name=${encodeURIComponent(v.cve)}`)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center space-x-1 text-slate-400 hover:text-white"
                         >
                           <span>MITRE</span>
-                          <ExternalLink size={11} />
+                          <ExternalLink size={10} />
                         </a>
                       </div>
 
@@ -991,20 +1058,34 @@ export default function IntelDossier({
 
             {/* 4.3. TARJETA WAPPALYZER // TECNOLOGÍAS UTILIZADAS, VERSIONES & DESCRIPCIÓN */}
             <div className="bg-[#0d1119] border border-[#1e2638] rounded overflow-hidden">
-              <div className="bg-[#111722] px-4 py-3 border-b border-[#1e2638] flex items-center justify-between">
+              <div className="bg-[#111722] px-4 py-3 border-b border-[#1e2638] flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center space-x-2">
                   <Globe size={14} className="text-[#38bdf8]" />
                   <span className="text-xs font-bold uppercase tracking-wider text-white">
                     Tecnologías Detectadas & Stack Técnico (Motor Wappalyzer)
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400">
-                  {http_audit?.wappalyzer?.length || http_audit?.technologies?.length || 0} componentes identificados
-                </span>
+                <div className="flex items-center space-x-2">
+                  {http_audit?.scan_mode === 'active' ? (
+                    <span className="px-2 py-0.5 rounded bg-[#3b0764]/50 border border-[#8b5cf6]/50 text-[#d8b4fe] text-[10px] font-mono flex items-center space-x-1" title="Modo Activo: Se realizan correlaciones de infraestructura y sondeo autorizado de banners en sockets">
+                      <Zap size={11} className="text-[#c084fc]" />
+                      <span>MODO ACTIVO</span>
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded bg-[#064e3b]/50 border border-[#10b981]/50 text-[#a7f3d0] text-[10px] font-mono flex items-center space-x-1" title="Modo Stealth: 100% pasivo, sin sondeo de puertos administrativos para garantizar cumplimiento legal y sigilo">
+                      <Shield size={11} className="text-[#10b981]" />
+                      <span>MODO STEALTH // PASIVO</span>
+                    </span>
+                  )}
+                  <span className="text-[11px] text-slate-400">
+                    {http_audit?.wappalyzer?.length || http_audit?.technologies?.length || 0} componentes identificados
+                  </span>
+                </div>
               </div>
 
               <div className="p-4">
                 {http_audit?.wappalyzer && http_audit.wappalyzer.length > 0 ? (
+                  <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {http_audit.wappalyzer.map((tech, i) => (
                       <div
@@ -1019,11 +1100,34 @@ export default function IntelDossier({
                           <div className="flex items-start justify-between gap-1.5">
                             <span className="text-xs font-bold text-white leading-tight">{tech.name}</span>
                             <div className="flex items-center space-x-1 shrink-0">
-                              {tech.version && (
+                              {tech.version_status === 'hardened' ? (
+                                <span
+                                  className="px-1.5 py-0.5 bg-[#f59e0b]/10 border border-[#f59e0b]/40 text-[#f59e0b] rounded text-[9px] font-mono font-bold flex items-center space-x-1"
+                                  title="Directiva defensiva activa (server_tokens off). El Modo Stealth respeta el límite legal y no sondea puertos administrativos."
+                                >
+                                  <Shield size={10} className="text-[#f59e0b]" />
+                                  <span>OCULTA (HARDENED)</span>
+                                </span>
+                              ) : tech.version_status === 'inferred_active' ? (
+                                <span
+                                  className="px-1.5 py-0.5 bg-[#8b5cf6]/20 border border-[#8b5cf6]/60 text-[#c084fc] rounded text-[9px] font-mono font-bold flex items-center space-x-1"
+                                  title={`Inferida activamente mediante banner SSH en puerto 22 (${tech.provenance || 'Modo Activo'})`}
+                                >
+                                  <Zap size={10} className="text-[#c084fc]" />
+                                  <span>{tech.version}</span>
+                                </span>
+                              ) : tech.version_status === 'architecture' ? (
+                                <span
+                                  className="px-1.5 py-0.5 bg-[#06b6d4]/15 border border-[#06b6d4]/50 text-[#22d3ee] rounded text-[9px] font-mono font-bold"
+                                  title="Arquitectura de compilación estática (Zero-JS en cliente / Islas)"
+                                >
+                                  {tech.version}
+                                </span>
+                              ) : tech.version ? (
                                 <span className="px-1.5 py-0.2 bg-[#0284c7]/20 border border-[#38bdf8]/60 text-[#38bdf8] rounded text-[10px] font-mono font-bold">
                                   v{tech.version}
                                 </span>
-                              )}
+                              ) : null}
                               {tech.vulnerable && (
                                 <span className="px-1.5 py-0.2 bg-[#450a0a] border border-[#ef4444]/80 text-[#fca5a5] rounded text-[9px] font-mono font-bold flex items-center space-x-1">
                                   <AlertTriangle size={9} className="text-[#ef4444]" />
@@ -1039,6 +1143,14 @@ export default function IntelDossier({
                             <p className="text-[11px] text-slate-400 font-sans mt-1.5 leading-snug line-clamp-2">
                               {tech.description}
                             </p>
+                          )}
+                          {tech.provenance && (
+                            <div className="text-[9px] font-mono text-slate-500 flex items-center space-x-1 mt-1.5">
+                              <span className="text-slate-600">Origen:</span>
+                              <span className={tech.detection_mode === 'active' ? 'text-[#c084fc] font-semibold' : 'text-slate-400'}>
+                                {tech.provenance}
+                              </span>
+                            </div>
                           )}
                         </div>
 
@@ -1064,43 +1176,47 @@ export default function IntelDossier({
                                   <div className="text-slate-400 text-[10px] mt-0.5 font-sans leading-tight line-clamp-2">
                                     {v.title || v.summary}
                                   </div>
-                                  <div className="flex items-center space-x-2 mt-1 pt-1 border-t border-[#1e2638] text-[9px]">
-                                    {v.poc_url && (
-                                      <a
-                                        href={v.poc_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-[#38bdf8] hover:underline inline-flex items-center space-x-0.5 font-bold"
-                                        title="Buscar Proof of Concept (PoC) en GitHub"
-                                      >
-                                        <span>PoC (GitHub)</span>
-                                        <ExternalLink size={8} />
-                                      </a>
-                                    )}
-                                    {v.exploitdb_url && (
-                                      <a
-                                        href={v.exploitdb_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-amber-400 hover:underline inline-flex items-center space-x-0.5"
-                                        title="Buscar exploit en Exploit-DB"
-                                      >
-                                        <span>Exploit-DB</span>
-                                        <ExternalLink size={8} />
-                                      </a>
-                                    )}
-                                    {v.nvd_url && (
-                                      <a
-                                        href={v.nvd_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-slate-400 hover:text-white inline-flex items-center space-x-0.5"
-                                        title="Ficha oficial en NIST NVD"
-                                      >
-                                        <span>NVD</span>
-                                        <ExternalLink size={8} />
-                                      </a>
-                                    )}
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-1 pt-1 border-t border-[#1e2638] text-[9px] font-mono">
+                                    <a
+                                      href={v.packetstorm_url || `https://packetstormsecurity.com/search/?q=${encodeURIComponent(v.cve)}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[#f87171] hover:underline inline-flex items-center space-x-0.5 font-bold"
+                                      title="Buscar exploit en PacketStorm Security"
+                                    >
+                                      <span>PacketStorm</span>
+                                      <ExternalLink size={8} />
+                                    </a>
+                                    <a
+                                      href={v.exploitdb_url || `https://www.exploit-db.com/search?cve=${encodeURIComponent(String(v.cve).replace('CVE-', ''))}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[#fb923c] hover:underline inline-flex items-center space-x-0.5 font-bold"
+                                      title="Buscar exploit en Exploit-DB"
+                                    >
+                                      <span>Exploit-DB</span>
+                                      <ExternalLink size={8} />
+                                    </a>
+                                    <a
+                                      href={v.vulners_url || `https://vulners.com/search?query=${encodeURIComponent(v.cve)}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[#facc15] hover:underline inline-flex items-center space-x-0.5"
+                                      title="Buscar en base de datos Vulners"
+                                    >
+                                      <span>Vulners</span>
+                                      <ExternalLink size={8} />
+                                    </a>
+                                    <a
+                                      href={v.nvd_url || `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(v.cve)}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-slate-400 hover:text-white inline-flex items-center space-x-0.5"
+                                      title="Ficha oficial en NIST NVD"
+                                    >
+                                      <span>NVD</span>
+                                      <ExternalLink size={8} />
+                                    </a>
                                   </div>
                                 </div>
                               ))}
@@ -1125,6 +1241,17 @@ export default function IntelDossier({
                       </div>
                     ))}
                   </div>
+
+                  {/* Aviso OPSEC Informativo cuando se detecta Hardening en Modo Stealth */}
+                  {http_audit?.wappalyzer?.some(t => t.version_status === 'hardened') && (http_audit?.scan_mode === 'passive' || !http_audit?.scan_mode) && (
+                    <div className="mt-3 p-2.5 bg-[#171308] border border-[#f59e0b]/30 rounded text-[11px] text-amber-200/90 flex items-start space-x-2">
+                      <Shield size={14} className="text-[#f59e0b] shrink-0 mt-0.5" />
+                      <p>
+                        <strong>Aviso de Hardening OPSEC:</strong> Se detectaron componentes con su versión suprimida por directivas de endurecimiento defensivo (ej. <code className="text-[#f59e0b]">server_tokens off;</code>). En <strong>Modo Stealth</strong> no se envían paquetes a puertos administrativos (como SSH p22) para preservar la legalidad y el sigilo total. Para intentar desanonimizar versiones mediante correlación activa autorizada de infraestructura, conmuta al <strong>Modo Activo</strong>.
+                      </p>
+                    </div>
+                  )}
+                  </>
                 ) : http_audit?.technologies && http_audit.technologies.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {http_audit.technologies.map((t, idx) => (
@@ -1345,102 +1472,312 @@ export default function IntelDossier({
 
               {/* SECCIÓN B: COMANDOS EN MODO ACTIVO (INTRUSIVO / AUDITORÍA AUTORIZADA) */}
               <div className="space-y-3 p-3 bg-[#180f0e] border border-[#ef4444]/30 rounded">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-[11px] font-bold uppercase text-[#f87171] flex items-center space-x-1.5 font-mono">
                     <Zap size={14} className="text-[#ef4444]" />
-                    <span>MODO ACTIVO // Auditoría Intrusiva, Fuzzing & Análisis de Vulnerabilidades</span>
+                    <span>MODO ACTIVO // Arsenal de Auditoría Autorizada & OWASP Top 10 (2025)</span>
                   </div>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#450a0a] text-[#fca5a5] border border-[#ef4444]/40">
-                    Solo Entornos Aprobados
+                    Solo Entornos Aprobados (39 Comandos)
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 font-sans">
-                  <strong className="text-red-400">Atención:</strong> Estos comandos interactúan directamente con los puertos y servicios, generando registros visibles en SIEM y posibles bloqueos de seguridad.
+                  <strong className="text-red-400">Atención OPSEC:</strong> Estos comandos interactúan directamente con los puertos y servicios, generando registros visibles en SIEM/WAF. Organizados según el marco oficial <strong>OWASP Top 10 (2025)</strong> y reconocimiento avanzado de infraestructura.
                 </p>
 
+                {/* Filtro Interactivo de Categorías */}
+                <div className="flex items-center space-x-1.5 overflow-x-auto pb-1.5 pt-1 border-b border-[#2d1b1b] text-[10px] font-mono scrollbar-thin">
+                  {[
+                    { id: 'all', label: 'Todos (39)' },
+                    { id: 'infra', label: 'Infraestructura & Puertos (9)' },
+                    { id: 'owasp_a01', label: 'A01: Acceso & SSRF (3)' },
+                    { id: 'owasp_a02', label: 'A02: Misconfig & Fuzzing (4)' },
+                    { id: 'owasp_a03', label: 'A03: Supply Chain & JS (5)' },
+                    { id: 'owasp_a04', label: 'A04: Criptografía & TLS (3)' },
+                    { id: 'owasp_a05', label: 'A05: Inyecciones (4)' },
+                    { id: 'owasp_a06', label: 'A06: APIs & Diseño (3)' },
+                    { id: 'owasp_a07', label: 'A07: Autenticación (2)' },
+                    { id: 'owasp_a08_10', label: 'A08-A10: Integridad, DNS & Errores (6)' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveCliTab(tab.id)}
+                      className={`px-2.5 py-1 rounded whitespace-nowrap cursor-pointer transition-colors ${
+                        activeCliTab === tab.id
+                          ? 'bg-[#ef4444] text-white font-bold shadow-sm'
+                          : 'bg-[#1e0a0d] hover:bg-[#2b1014] text-slate-300 border border-[#3b151a]'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="space-y-4 pt-1">
-                  {/* B.1 Red y Servicios */}
-                  <div className="space-y-2">
-                    <div className="text-[10px] font-bold uppercase text-slate-300 font-mono">
-                      B.1 Escaneo de Versiones, Banners y Barrido de Puertos
+                  {/* B.1 Infraestructura & Puertos */}
+                  {(activeCliTab === 'all' || activeCliTab === 'infra') && (
+                    <div className="space-y-2">
+                      <div className="text-[10px] font-bold uppercase text-slate-300 font-mono flex items-center justify-between">
+                        <span>B.1 Reconocimiento de Infraestructura, Banners & Servicios Expuestos</span>
+                        <span className="text-slate-500 text-[9px]">9 Comandos</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <CopyCommandBlock
+                          label="Nmap · Escaneo Exhaustivo de Versiones y Scripts por Defecto"
+                          command={`nmap -sV -sC -Pn -p ${openPortsStr} ${primaryIp}`}
+                        />
+                        <CopyCommandBlock
+                          label="Nmap · Auditoría Automatizada de CVEs con Vulners NSE"
+                          command={`nmap -sV --script vulners -p ${openPortsStr} ${primaryIp}`}
+                        />
+                        <CopyCommandBlock
+                          label="Nmap · Suite Completa de Detección de Vulnerabilidades (vuln)"
+                          command={`nmap -sV --script vuln -p ${openPortsStr} ${primaryIp}`}
+                        />
+                        <CopyCommandBlock
+                          label="Nmap · Detección de Sistema Operativo y Tiempos Agresivos (T4)"
+                          command={`nmap -A -O -T4 -Pn -p ${openPortsStr} ${primaryIp}`}
+                        />
+                        <CopyCommandBlock
+                          label="Masscan · Barrido Ultrarrápido de los 65.535 Puertos TCP"
+                          command={`masscan -p1-65535 ${primaryIp} --rate=1000 -e eth0`}
+                        />
+                        <CopyCommandBlock
+                          label="FTP Anon · Verificación de Acceso Anónimo y Bouncing en Puerto 21"
+                          command={`nmap -p 21 --script ftp-anon,ftp-bounce ${primaryIp}`}
+                        />
+                        <CopyCommandBlock
+                          label="MySQL · Auditoría de Usuario Root sin Contraseña en Puerto 3306"
+                          command={`nmap -p 3306 --script mysql-empty-password,mysql-info ${primaryIp}`}
+                        />
+                        <CopyCommandBlock
+                          label="Redis CLI · Comprobación de Acceso sin Autenticación en Puerto 6379"
+                          command={`redis-cli -h ${primaryIp} -p 6379 ping`}
+                        />
+                        <CopyCommandBlock
+                          label="NetExec (nxc) · Auditoría de Protocolos SMB / WinRM / Null Session"
+                          command={`nxc smb ${primaryIp} -u '' -p ''`}
+                        />
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <CopyCommandBlock
-                        label="Nmap · Escaneo Exhaustivo de Versiones y Scripts por Defecto"
-                        command={`nmap -sV -sC -Pn -p ${openPortsStr} ${primaryIp}`}
-                      />
-                      <CopyCommandBlock
-                        label="Nmap · Auditoría Automatizada de Vulnerabilidades y Exploits (Vulners NSE)"
-                        command={`nmap -sV --script vulners -p ${openPortsStr} ${primaryIp}`}
-                      />
-                      <CopyCommandBlock
-                        label="Nmap · Detección de Sistema Operativo y Tiempos Agresivos"
-                        command={`nmap -A -O -T4 -Pn -p ${openPortsStr} ${primaryIp}`}
-                      />
-                      <CopyCommandBlock
-                        label="Masscan · Barrido Ultrarrápido de los 65.535 Puertos TCP"
-                        command={`masscan -p1-65535 ${primaryIp} --rate=1000 -e eth0`}
-                      />
-                    </div>
-                  </div>
+                  )}
 
-                  {/* B.2 Web & Fuzzing */}
-                  <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
-                    <div className="text-[10px] font-bold uppercase text-slate-300 font-mono">
-                      B.2 Auditoría Web, Fuzzing de Rutas y Escaneo de Plantillas
+                  {/* B.2 A01:2025 – Broken Access Control & SSRF */}
+                  {(activeCliTab === 'all' || activeCliTab === 'owasp_a01') && (
+                    <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
+                      <div className="text-[10px] font-bold uppercase text-slate-300 font-mono flex items-center justify-between">
+                        <span className="text-[#f87171]">A01:2025 · Broken Access Control, BOLA, BFLA & SSRF</span>
+                        <span className="text-slate-500 text-[9px]">3 Comandos</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <CopyCommandBlock
+                          label="Nuclei · Detección de SSRF, IDOR y Evasión de Control de Acceso"
+                          command={`nuclei -u https://${target} -tags ssrf,idor,auth-bypass -severity high,critical`}
+                        />
+                        <CopyCommandBlock
+                          label="cURL · Evasión de Autorización mediante Cabeceras de Proxy Reverso"
+                          command={`curl -k -s -I -H "X-Original-URL: /admin" -H "X-Forwarded-For: 127.0.0.1" https://${target}/`}
+                        />
+                        <CopyCommandBlock
+                          label="Ffuf · Fuzzing de Virtual Hosts y Subdominios Ocultos"
+                          command={`ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -u https://${target} -H "Host: FUZZ.${target}" -fs 0`}
+                        />
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <CopyCommandBlock
-                        label="Nuclei · Escaneo de Plantillas de CVEs Críticas, Altas y Fugas"
-                        command={`nuclei -u https://${target} -severity critical,high,medium -tags cve,exposure,misconfig`}
-                      />
-                      <CopyCommandBlock
-                        label="Nikto · Auditoría Completa de Seguridad del Servidor Web"
-                        command={`nikto -h https://${target} -Tuning 123b -C all`}
-                      />
-                      <CopyCommandBlock
-                        label="Feroxbuster · Fuzzing Recursivo Rápido de Directorios y Archivos Ocultos"
-                        command={`feroxbuster -u https://${target} -w /usr/share/wordlists/dirb/common.txt -x php,html,js,txt,json -t 30`}
-                      />
-                      <CopyCommandBlock
-                        label="Gobuster · Descubrimiento de Rutas y Archivos Sensibles"
-                        command={`gobuster dir -u https://${target} -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -t 40 -k`}
-                      />
-                      <CopyCommandBlock
-                        label="Ffuf · Fuzzing de Virtual Hosts / Subdominios Ocultos"
-                        command={`ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -u https://${target} -H "Host: FUZZ.${target}" -fs 0`}
-                      />
-                      <CopyCommandBlock
-                        label="WPScan · Auditoría de Plugins, Temas y Usuarios (si detecta WordPress)"
-                        command={`wpscan --url https://${target} --enumerate p,t,u --api-token TU_TOKEN_WPSCAN`}
-                      />
-                    </div>
-                  </div>
+                  )}
 
-                  {/* B.3 Criptografía & Servicios Específicos */}
-                  <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
-                    <div className="text-[10px] font-bold uppercase text-slate-300 font-mono">
-                      B.3 Criptografía Profunda & Servicios de Red (SSH / SMB / TLS)
+                  {/* B.3 A02:2025 – Security Misconfiguration */}
+                  {(activeCliTab === 'all' || activeCliTab === 'owasp_a02') && (
+                    <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
+                      <div className="text-[10px] font-bold uppercase text-slate-300 font-mono flex items-center justify-between">
+                        <span className="text-[#fb923c]">A02:2025 · Security Misconfiguration & Fuzzing de Rutas</span>
+                        <span className="text-slate-500 text-[9px]">4 Comandos</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <CopyCommandBlock
+                          label="Nikto · Auditoría Completa de Seguridad y Misconfig en Servidor Web"
+                          command={`nikto -h https://${target} -Tuning 123b -C all`}
+                        />
+                        <CopyCommandBlock
+                          label="Feroxbuster · Fuzzing Recursivo de Rutas Críticas (.env, .git, backups)"
+                          command={`feroxbuster -u https://${target} -w /usr/share/wordlists/dirb/common.txt -x php,html,js,txt,json,env,git -t 30`}
+                        />
+                        <CopyCommandBlock
+                          label="Gobuster · Descubrimiento de Directorios y Archivos Sensibles"
+                          command={`gobuster dir -u https://${target} -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -t 40 -k`}
+                        />
+                        <CopyCommandBlock
+                          label="Wafw00f · Identificación y Fingerprinting de Cortafuegos Web (WAF)"
+                          command={`wafw00f https://${target}`}
+                        />
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <CopyCommandBlock
-                        label="sslscan · Auditoría de Cifrados, Protocolos Obsoletos (TLS 1.0/1.1) y Heartbleed"
-                        command={`sslscan --tlsall ${target}:443`}
-                      />
-                      <CopyCommandBlock
-                        label="testssl.sh · Evaluación Profunda de Vulnerabilidades TLS (POODLE, DROWN, ROBOT)"
-                        command={`testssl.sh --full https://${target}`}
-                      />
-                      <CopyCommandBlock
-                        label="ssh-audit · Análisis de Cifrados Débiles y Banners SSH (Puerto 22)"
-                        command={`ssh-audit -v ${primaryIp}`}
-                      />
-                      <CopyCommandBlock
-                        label="NetExec (nxc) · Auditoría de Protocolos SMB / WinRM / SSH"
-                        command={`nxc smb ${primaryIp} -u '' -p ''`}
-                      />
+                  )}
+
+                  {/* B.4 A03:2025 – Software Supply Chain Failures & Fugas JS */}
+                  {(activeCliTab === 'all' || activeCliTab === 'owasp_a03') && (
+                    <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
+                      <div className="text-[10px] font-bold uppercase text-slate-300 font-mono flex items-center justify-between">
+                        <span className="text-[#facc15]">A03:2025 · Software Supply Chain Failures, SCA & Fugas JS</span>
+                        <span className="text-slate-500 text-[9px]">5 Comandos</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <CopyCommandBlock
+                          label="Nuclei · Auditoría de Componentes y CVEs en Dependencias Web"
+                          command={`nuclei -u https://${target} -tags cve,tech,exposure -severity high,critical`}
+                        />
+                        <CopyCommandBlock
+                          label="WPScan · Auditoría de Plugins, Temas y Usuarios en WordPress"
+                          command={`wpscan --url https://${target} --enumerate p,t,u --api-token TU_TOKEN_WPSCAN`}
+                        />
+                        <CopyCommandBlock
+                          label="TruffleHog · Detección de Claves API y Secretos en Rutas Web"
+                          command={`trufflehog url --include-paths https://${target}`}
+                        />
+                        <CopyCommandBlock
+                          label="SecretFinder · Extracción de Tokens y Credenciales en Archivos JavaScript"
+                          command={`python3 SecretFinder.py -i https://${target} -e -o cli`}
+                        />
+                        <CopyCommandBlock
+                          label="Jsluice · Análisis AST de Archivos JavaScript para Extraer Endpoints"
+                          command={`jsluice urls https://${target}`}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* B.5 A04:2025 – Cryptographic Failures */}
+                  {(activeCliTab === 'all' || activeCliTab === 'owasp_a04') && (
+                    <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
+                      <div className="text-[10px] font-bold uppercase text-slate-300 font-mono flex items-center justify-between">
+                        <span className="text-[#38bdf8]">A04:2025 · Cryptographic Failures, Cifrados & Protocolos TLS</span>
+                        <span className="text-slate-500 text-[9px]">3 Comandos</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <CopyCommandBlock
+                          label="sslscan · Auditoría de Cifrados, Protocolos Obsoletos (TLS 1.0/1.1) y Heartbleed"
+                          command={`sslscan --tlsall ${target}:443`}
+                        />
+                        <CopyCommandBlock
+                          label="testssl.sh · Evaluación Profunda de TLS (POODLE, DROWN, ROBOT, BEAST)"
+                          command={`testssl.sh --full https://${target}`}
+                        />
+                        <CopyCommandBlock
+                          label="ssh-audit · Análisis de Cifrados Débiles y Banners SSH (Puerto 22)"
+                          command={`ssh-audit -v ${primaryIp}`}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* B.6 A05:2025 – Injection & Fuzzing */}
+                  {(activeCliTab === 'all' || activeCliTab === 'owasp_a05') && (
+                    <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
+                      <div className="text-[10px] font-bold uppercase text-slate-300 font-mono flex items-center justify-between">
+                        <span className="text-[#f87171]">A05:2025 · Injection (SQLi, XSS, Command Injection) & Parámetros</span>
+                        <span className="text-slate-500 text-[9px]">4 Comandos</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <CopyCommandBlock
+                          label="SQLmap · Inyección SQL Automatizada en Formularios y Parámetros"
+                          command={`sqlmap -u "https://${target}/" --crawl=2 --batch --random-agent --level=2 --risk=1`}
+                        />
+                        <CopyCommandBlock
+                          label="Dalfox · Escaneo Avanzado de XSS (DOM, Reflejado y Almacenado)"
+                          command={`dalfox url https://${target} --skip-bav --silence`}
+                        />
+                        <CopyCommandBlock
+                          label="Commix · Detección y Explotación de Inyección de Comandos en el SO"
+                          command={`commix --url="https://${target}/" --batch`}
+                        />
+                        <CopyCommandBlock
+                          label="Arjun · Descubrimiento y Fuzzing de Parámetros HTTP Ocultos"
+                          command={`arjun -u https://${target} --get --passive`}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* B.7 A06:2025 – Insecure Design & APIs */}
+                  {(activeCliTab === 'all' || activeCliTab === 'owasp_a06') && (
+                    <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
+                      <div className="text-[10px] font-bold uppercase text-slate-300 font-mono flex items-center justify-between">
+                        <span className="text-[#c084fc]">A06:2025 · Insecure Design, Crawling & APIs Modernas</span>
+                        <span className="text-slate-500 text-[9px]">3 Comandos</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <CopyCommandBlock
+                          label="Katana · Web Crawler Activo para Descubrimiento de Rutas y Formularios JS"
+                          command={`katana -u https://${target} -d 4 -jc -kf -silent`}
+                        />
+                        <CopyCommandBlock
+                          label="Kiterunner (kr) · Fuzzing de Rutas y Endpoints de API REST / OpenAPI"
+                          command={`kr scan https://${target} -w routes-large.kite -x 20`}
+                        />
+                        <CopyCommandBlock
+                          label="GraphQL-Cop · Auditoría de Seguridad e Introspección en Endpoints GraphQL"
+                          command={`graphql-cop -t https://${target}/graphql`}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* B.8 A07:2025 – Authentication Failures */}
+                  {(activeCliTab === 'all' || activeCliTab === 'owasp_a07') && (
+                    <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
+                      <div className="text-[10px] font-bold uppercase text-slate-300 font-mono flex items-center justify-between">
+                        <span className="text-[#f87171]">A07:2025 · Identification and Authentication Failures</span>
+                        <span className="text-slate-500 text-[9px]">2 Comandos</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <CopyCommandBlock
+                          label="Nmap · Auditoría de Cuentas por Defecto en Servicios Web y Administrativos"
+                          command={`nmap -p 22,21,80,443 --script http-default-accounts,ftp-anon ${primaryIp}`}
+                        />
+                        <CopyCommandBlock
+                          label="Hydra · Prueba Controlada de Fuerza Bruta en Formulario de Acceso"
+                          command={`hydra -l admin -P /usr/share/wordlists/rockyou.txt ${primaryIp} http-post-form`}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* B.9 A08-A10:2025 – Integridad, DNS, Spoofing & Excepciones */}
+                  {(activeCliTab === 'all' || activeCliTab === 'owasp_a08_10') && (
+                    <div className="space-y-2 pt-2 border-t border-[#2d1b1b]">
+                      <div className="text-[10px] font-bold uppercase text-slate-300 font-mono flex items-center justify-between">
+                        <span className="text-[#a7f3d0]">A08-A10:2025 · Integridad, Subdominios, Spoofing, Logs & Excepciones</span>
+                        <span className="text-slate-500 text-[9px]">6 Comandos</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <CopyCommandBlock
+                          label="Subzy · Detección de Subdomain Takeover en CNAMEs Huérfanos"
+                          command={`subzy run --targets subdomains.txt --concurrency 20`}
+                        />
+                        <CopyCommandBlock
+                          label="DNSx · Resolución Activa de DNS, Filtrado de Wildcards y CNAMEs"
+                          command={`dnsx -d ${target} -w subdomains.txt -resp -a -cname`}
+                        />
+                        <CopyCommandBlock
+                          label="Checkdmarc · Evaluación de Políticas Anti-Spoofing (SPF / DKIM / DMARC)"
+                          command={`checkdmarc ${target} --format json`}
+                        />
+                        <CopyCommandBlock
+                          label="Nuclei · A08:2025 Deserialización Insegura y Fallos de Integridad"
+                          command={`nuclei -u https://${target} -tags deserialization,integrity`}
+                        />
+                        <CopyCommandBlock
+                          label="cURL · A09:2025 Prueba de Generación de Alertas y Telemetría en Servidor"
+                          command={`curl -k -s -A "SniperScope-AlertTest/1.0" -w "%{http_code}\n" -o /dev/null "https://${target}/audit_trigger_test"`}
+                        />
+                        <CopyCommandBlock
+                          label="cURL · A10:2025 Detección de Fugas de Stack Trace y Excepciones No Manejadas"
+                          command={`curl -k -s -i -H "X-Debug: 1" "https://${target}/%00" | grep -i -E "exception|traceback|stack"`}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1521,16 +1858,13 @@ export default function IntelDossier({
                 </div>
               </div>
 
-              {/* Google Dorks */}
+              {/* Google Hacking Dorks */}
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
                 <div className="flex items-center space-x-2 text-xs font-bold uppercase font-mono text-[#facc15]">
                   <Search size={14} className="text-[#facc15]" />
-                  <span>Google Hacking / Dorks (Fugas & Paneles)</span>
+                  <span>Google Hacking / Dorks de Reconocimiento</span>
                 </div>
-                <p className="text-[11px] text-slate-400 font-sans">
-                  Sondea archivos de configuración expuestos, backups y paneles de acceso con indexación pública:
-                </p>
-                <div className="space-y-2 pt-1 font-mono text-xs">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 font-mono text-xs">
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                     <div>
                       <span className="text-slate-500 block text-[10px]">Ficheros Sensibles (.env, .sql, .log)</span>
@@ -1540,27 +1874,29 @@ export default function IntelDossier({
                       href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+ext%3Aenv+OR+ext%3Asql+OR+ext%3Alog+OR+ext%3Abak+OR+ext%3Ayml`}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
                     >
                       <span>Google Dork</span>
                       <ExternalLink size={9} />
                     </a>
                   </div>
+
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                     <div>
-                      <span className="text-slate-500 block text-[10px]">Paneles de Administración / Login</span>
-                      <code className="text-slate-200 text-[11px]">inurl:admin | login | dashboard</code>
+                      <span className="text-slate-500 block text-[10px]">Paneles de Administración y CMS</span>
+                      <code className="text-slate-200 text-[11px]">inurl:admin | login | wp-admin</code>
                     </div>
                     <a
-                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+inurl%3Aadmin+OR+inurl%3Alogin+OR+inurl%3Adashboard`}
+                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+inurl%3Aadmin+OR+inurl%3Alogin+OR+inurl%3Awp-admin+OR+inurl%3Adashboard`}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
                     >
                       <span>Google Dork</span>
                       <ExternalLink size={9} />
                     </a>
                   </div>
+
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
                     <div>
                       <span className="text-slate-500 block text-[10px]">Listados de Directorios Expuestos</span>
@@ -1570,9 +1906,98 @@ export default function IntelDossier({
                       href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+intitle%3A%22index+of%22`}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
                     >
                       <span>Google Dork</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Documentos Públicos y Ofimática</span>
+                      <code className="text-slate-200 text-[11px]">filetype:pdf | xlsx | docx</code>
+                    </div>
+                    <a
+                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+filetype%3Apdf+OR+filetype%3Axlsx+OR+filetype%3Adocx+OR+filetype%3Acsv`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>Google Dork</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Subdominios Indexados</span>
+                      <code className="text-slate-200 text-[11px]">site:*.{target} -www</code>
+                    </div>
+                    <a
+                      href={`https://www.google.com/search?q=site%3A*.${encodeURIComponent(target)}+-www.${encodeURIComponent(target)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>Google Dork</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Claves, VPNs y Certificados</span>
+                      <code className="text-slate-200 text-[11px]">ext:pem | key | ovpn | conf</code>
+                    </div>
+                    <a
+                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+ext%3Apem+OR+ext%3Akey+OR+ext%3Aovpn+OR+ext%3Aconf`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>Google Dork</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* GitHub Leak Dorks */}
+              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
+                <div className="flex items-center space-x-2 text-xs font-bold uppercase font-mono text-[#a78bfa]">
+                  <Bug size={14} className="text-[#a78bfa]" />
+                  <span>GitHub Code Search / Fugas de Credenciales</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 font-mono text-xs">
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Secretos y Contraseñas</span>
+                      <code className="text-slate-200 text-[11px]">"{target}" password | secret</code>
+                    </div>
+                    <a
+                      href={`https://github.com/search?q=%22${encodeURIComponent(target)}%22+password+OR+secret+OR+api_key&type=code`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#7c3aed] text-purple-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>GitHub Search</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  </div>
+
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Archivos .env y Credenciales</span>
+                      <code className="text-slate-200 text-[11px]">"{target}" filename:.env</code>
+                    </div>
+                    <a
+                      href={`https://github.com/search?q=%22${encodeURIComponent(target)}%22+filename%3A.env+OR+filename%3Acredentials&type=code`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#7c3aed] text-purple-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                    >
+                      <span>GitHub Search</span>
                       <ExternalLink size={9} />
                     </a>
                   </div>
@@ -1587,13 +2012,33 @@ export default function IntelDossier({
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-xs">
                 <a
+                  href={`https://www.virustotal.com/gui/domain/${encodeURIComponent(target)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] hover:border-[#38bdf8] text-slate-300 hover:text-white rounded transition-colors inline-flex items-center space-x-1.5"
+                >
+                  <Shield size={13} className="text-[#38bdf8]" />
+                  <span>VirusTotal</span>
+                  <ExternalLink size={10} />
+                </a>
+                <a
                   href={`https://urlscan.io/domain/${target}`}
                   target="_blank"
                   rel="noreferrer"
                   className="px-3 py-1.5 bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] hover:border-[#38bdf8] text-slate-300 hover:text-white rounded transition-colors inline-flex items-center space-x-1.5"
                 >
-                  <Globe size={13} className="text-[#38bdf8]" />
+                  <Globe size={13} className="text-[#10b981]" />
                   <span>URLScan.io</span>
+                  <ExternalLink size={10} />
+                </a>
+                <a
+                  href={`https://otx.alienvault.com/indicator/domain/${encodeURIComponent(target)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] hover:border-[#38bdf8] text-slate-300 hover:text-white rounded transition-colors inline-flex items-center space-x-1.5"
+                >
+                  <ShieldAlert size={13} className="text-[#f87171]" />
+                  <span>AlienVault OTX</span>
                   <ExternalLink size={10} />
                 </a>
                 <a
@@ -1602,8 +2047,18 @@ export default function IntelDossier({
                   rel="noreferrer"
                   className="px-3 py-1.5 bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] hover:border-[#38bdf8] text-slate-300 hover:text-white rounded transition-colors inline-flex items-center space-x-1.5"
                 >
-                  <Server size={13} className="text-[#10b981]" />
-                  <span>Censys Search</span>
+                  <Server size={13} className="text-[#38bdf8]" />
+                  <span>Censys</span>
+                  <ExternalLink size={10} />
+                </a>
+                <a
+                  href={`https://web.archive.org/web/*/${encodeURIComponent(target)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] hover:border-[#38bdf8] text-slate-300 hover:text-white rounded transition-colors inline-flex items-center space-x-1.5"
+                >
+                  <Clock size={13} className="text-[#fb923c]" />
+                  <span>Wayback Machine</span>
                   <ExternalLink size={10} />
                 </a>
                 <a

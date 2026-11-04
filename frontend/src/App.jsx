@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Crosshair, AlertCircle, Columns, FileText, Network, Download, LogOut } from 'lucide-react';
+import { Crosshair, AlertCircle, Columns, FileText, Network, Download, LogOut, UserSearch } from 'lucide-react';
 import TargetInput from './components/TargetInput';
 import GraphCanvas from './components/GraphCanvas';
 import IntelDossier from './components/IntelDossier';
 import NodeDetails from './components/NodeDetails';
 import ForensicReportModal from './components/ForensicReportModal';
 import LoginScreen from './components/LoginScreen';
+import SherlockView from './components/SherlockView';
 import { fetchScan, checkShodanStatus, verifyAuthSession, clearAuthToken } from './services/api';
 
 const RECENT_SCANS_KEY = 'sniperscope_sessions_cache_v3';
@@ -35,6 +36,16 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [shodanInfo, setShodanInfo] = useState(null);
+  // activeModule: 'easm' (Infraestructura / Red / IP) | 'sherlock' (Identidad / SOCMINT)
+  const [activeModule, setActiveModule] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && window.location.pathname.startsWith('/sherlock')
+        ? 'sherlock'
+        : 'easm';
+    } catch {
+      return 'easm';
+    }
+  });
   // viewMode: 'split' (Texto izq + Grafo der) | 'text' (Solo Texto) | 'graph' (Solo Grafo)
   const [viewMode, setViewMode] = useState('split');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -64,6 +75,27 @@ export default function App() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const isSherlock = window.location.pathname.startsWith('/sherlock');
+      setActiveModule(isSherlock ? 'sherlock' : 'easm');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleSwitchModule = (moduleName) => {
+    setActiveModule(moduleName);
+    try {
+      const targetPath = moduleName === 'sherlock' ? '/sherlock' : '/';
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({}, '', targetPath);
+      }
+    } catch {
+      // Ignore
+    }
+  };
 
   const handleLoginSuccess = (loginData) => {
     setAuthState({
@@ -110,6 +142,7 @@ export default function App() {
   };
 
   const handleGoHome = () => {
+    handleSwitchModule('easm');
     setScanData(null);
     setSelectedNode(null);
     setErrorMessage(null);
@@ -229,6 +262,25 @@ export default function App() {
 
         {/* Conmutador de Vistas (Icon-Only) + Exportar Informe (Icon-Only) + Estado Shodan + Logout */}
         <div className="flex items-center gap-2 text-xs font-mono">
+          {/* Botón de acceso directo a Sherlock SOCMINT */}
+          <button
+            type="button"
+            onClick={() => handleSwitchModule(activeModule === 'sherlock' ? 'easm' : 'sherlock')}
+            title={
+              activeModule === 'sherlock'
+                ? 'Volver al escáner de Infraestructura y Red (EASM)'
+                : 'Sherlock // SOCMINT Hunter (Identidad y Cuentas de Usuario)'
+            }
+            aria-label="Sherlock SOCMINT Hunter"
+            className={`p-2 rounded flex items-center justify-center transition-all cursor-pointer border ${
+              activeModule === 'sherlock'
+                ? 'bg-purple-950/80 border-purple-500 text-purple-300 shadow-md shadow-purple-900/40 ring-1 ring-purple-500/50'
+                : 'bg-[#090b10] border-[#1e2638] text-slate-400 hover:text-purple-400 hover:border-purple-500/40'
+            }`}
+          >
+            <UserSearch size={16} />
+          </button>
+
           {/* Selector de Modo de Vista */}
           <div className="flex items-center bg-[#090b10] border border-[#1e2638] p-0.5 rounded">
             <button
@@ -317,115 +369,123 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. Barra de Búsqueda y Selector de Modo OPSEC */}
-      <div className="px-4 py-1 border-b border-[#1e2638] bg-[#090b10] shrink-0">
-        <TargetInput
-          onScan={(t) => handleScan(t, false)}
-          isLoading={isLoading}
-          activeTarget={activeTarget}
-          scanMode={scanMode}
-          onChangeScanMode={setScanMode}
-        />
-      </div>
-
-      {/* Alerta de Error */}
-      {errorMessage && (
-        <div className="px-4 py-2 bg-[#2a1317] border-b border-[#7f1d1d] text-[#f87171] text-xs font-mono flex items-center space-x-2 shrink-0">
-          <AlertCircle size={14} />
-          <span>{errorMessage}</span>
+      {activeModule === 'sherlock' ? (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <SherlockView onBackToEasm={() => handleSwitchModule('easm')} />
         </div>
-      )}
+      ) : (
+        <>
+          {/* 2. Barra de Búsqueda y Selector de Modo OPSEC */}
+          <div className="px-4 py-1 border-b border-[#1e2638] bg-[#090b10] shrink-0">
+            <TargetInput
+              onScan={(t) => handleScan(t, false)}
+              isLoading={isLoading}
+              activeTarget={activeTarget}
+              scanMode={scanMode}
+              onChangeScanMode={setScanMode}
+            />
+          </div>
 
-      {/* 3. Área de Trabajo Principal según viewMode */}
-      <main className="relative flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
-        {/* Overlay Animado de Escaneo Activo durante la búsqueda */}
-        {isLoading && (
-          <div className="absolute inset-0 z-30 bg-[#07090e]/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center select-none">
-            <div className="relative flex items-center justify-center mb-4">
-              <div className="w-16 h-16 rounded-full border border-[#38bdf8]/30 animate-ping absolute" />
-              <div className="w-14 h-14 rounded-full border border-[#38bdf8]/60 flex items-center justify-center bg-[#0d1527] shadow-[0_0_20px_rgba(56,189,248,0.25)]">
-                <Crosshair size={26} className="text-[#38bdf8] animate-spin [animation-duration:4s]" />
+          {/* Alerta de Error */}
+          {errorMessage && (
+            <div className="px-4 py-2 bg-[#2a1317] border-b border-[#7f1d1d] text-[#f87171] text-xs font-mono flex items-center space-x-2 shrink-0">
+              <AlertCircle size={14} />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {/* 3. Área de Trabajo Principal según viewMode */}
+          <main className="relative flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+            {/* Overlay Animado de Escaneo Activo durante la búsqueda */}
+            {isLoading && (
+              <div className="absolute inset-0 z-30 bg-[#07090e]/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center select-none">
+                <div className="relative flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 rounded-full border border-[#38bdf8]/30 animate-ping absolute" />
+                  <div className="w-14 h-14 rounded-full border border-[#38bdf8]/60 flex items-center justify-center bg-[#0d1527] shadow-[0_0_20px_rgba(56,189,248,0.25)]">
+                    <Crosshair size={26} className="text-[#38bdf8] animate-spin [animation-duration:4s]" />
+                  </div>
+                </div>
+                <div className="font-mono text-sm font-bold text-white tracking-wide">
+                  EJECUTANDO RECONOCIMIENTO EN PARALELO
+                </div>
+                <div className="font-mono text-xs text-[#38bdf8] mt-1">
+                  Objetivo: <span className="text-white font-semibold">{activeTarget}</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-[10px] font-mono text-slate-400">
+                  <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse">
+                    DNS & CAA
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:150ms]">
+                    Certificate Transparency
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:300ms]">
+                    Shodan & CVEDB
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:450ms]">
+                    TLS X.509 & Wappalyzer
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:600ms]">
+                    RDAP & ASN
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="font-mono text-sm font-bold text-white tracking-wide">
-              EJECUTANDO RECONOCIMIENTO EN PARALELO
-            </div>
-            <div className="font-mono text-xs text-[#38bdf8] mt-1">
-              Objetivo: <span className="text-white font-semibold">{activeTarget}</span>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-[10px] font-mono text-slate-400">
-              <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse">
-                DNS & CAA
-              </span>
-              <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:150ms]">
-                Certificate Transparency
-              </span>
-              <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:300ms]">
-                Shodan & CVEDB
-              </span>
-              <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:450ms]">
-                TLS X.509 & Wappalyzer
-              </span>
-              <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] animate-pulse [animation-delay:600ms]">
-                RDAP & ASN
-              </span>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* COLUMNA IZQUIERDA: DOSSIER DE INFORMACIÓN EN TEXTO */}
-        {(viewMode === 'split' || viewMode === 'text') && (
-          <div
-            className={`h-full min-h-0 overflow-hidden ${
-              viewMode === 'split'
-                ? 'w-full lg:w-[55%] xl:w-[57%] border-b lg:border-b-0 lg:border-r border-[#1e2638]'
-                : 'w-full'
-            }`}
-          >
-            <IntelDossier
-              scanData={scanData}
-              onFocusNode={handleFocusNodeInGraph}
-              onOpenReport={() => setIsReportModalOpen(true)}
-              recentScans={recentScans}
-              onSelectRecent={handleSelectRecent}
-              onClearRecent={handleClearRecent}
-              onRefreshScan={(t) => handleScan(t, true)}
-            />
-          </div>
-        )}
-
-        {/* COLUMNA DERECHA: GRAFO DE RELACIONES INTERACTIVO */}
-        {(viewMode === 'split' || viewMode === 'graph') && (
-          <div
-            className={`h-full min-h-0 relative overflow-hidden ${
-              viewMode === 'split' ? 'w-full lg:w-[45%] xl:w-[43%]' : 'w-full'
-            }`}
-          >
-            <GraphCanvas
-              graphData={scanData?.graph}
-              onSelectNode={handleSelectNode}
-              selectedNodeId={selectedNode?.id}
-            />
-
-            {/* Tarjeta flotante de inspección cuando se selecciona un nodo en el grafo */}
-            {selectedNode && (
-              <div className="absolute top-3 right-3 z-20 w-80 sm:w-96 max-w-[calc(100%-1.5rem)]">
-                <NodeDetails
-                  selectedNode={selectedNode}
-                  onClose={() => setSelectedNode(null)}
+            {/* COLUMNA IZQUIERDA: DOSSIER DE INFORMACIÓN EN TEXTO */}
+            {(viewMode === 'split' || viewMode === 'text') && (
+              <div
+                className={`h-full min-h-0 overflow-hidden ${
+                  viewMode === 'split'
+                    ? 'w-full lg:w-[55%] xl:w-[57%] border-b lg:border-b-0 lg:border-r border-[#1e2638]'
+                    : 'w-full'
+                }`}
+              >
+                <IntelDossier
+                  scanData={scanData}
+                  onFocusNode={handleFocusNodeInGraph}
+                  onOpenReport={() => setIsReportModalOpen(true)}
+                  recentScans={recentScans}
+                  onSelectRecent={handleSelectRecent}
+                  onClearRecent={handleClearRecent}
+                  onRefreshScan={(t) => handleScan(t, true)}
                 />
               </div>
             )}
-          </div>
-        )}
-      </main>
 
-      {/* Modal de Exportación de Informe Forense */}
-      <ForensicReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        scanData={scanData}
-      />
+            {/* COLUMNA DERECHA: GRAFO DE RELACIONES INTERACTIVO */}
+            {(viewMode === 'split' || viewMode === 'graph') && (
+              <div
+                className={`h-full min-h-0 relative overflow-hidden ${
+                  viewMode === 'split' ? 'w-full lg:w-[45%] xl:w-[43%]' : 'w-full'
+                }`}
+              >
+                <GraphCanvas
+                  graphData={scanData?.graph}
+                  onSelectNode={handleSelectNode}
+                  selectedNodeId={selectedNode?.id}
+                />
+
+                {/* Tarjeta flotante de inspección cuando se selecciona un nodo en el grafo */}
+                {selectedNode && (
+                  <div className="absolute top-3 right-3 z-20 w-80 sm:w-96 max-w-[calc(100%-1.5rem)]">
+                    <NodeDetails
+                      selectedNode={selectedNode}
+                      onClose={() => setSelectedNode(null)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+
+          {/* Modal de Exportación de Informe Forense */}
+          <ForensicReportModal
+            isOpen={isReportModalOpen}
+            onClose={() => setIsReportModalOpen(false)}
+            scanData={scanData}
+          />
+        </>
+      )}
     </div>
   );
 }
