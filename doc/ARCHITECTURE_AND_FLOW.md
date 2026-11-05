@@ -150,9 +150,9 @@ The Sherlock reconnaissance workstation operates independently via **Server-Sent
      - **CNMV** (Comisión Nacional del Mercado de Valores)
      - **INE** (Frecuencia de apellidos y nombres)
 3. **Phone Hunter (`/api/osint/phone/{number}`):**
-   - International E.164 normalization, CNMC Spain carrier routing allocation, spam reports aggregation (Listaspam), and automated PhoneInfoga search dork generation.
+   - International E.164 normalization, carrier routing allocation, line classification (Mobile, Fixed, VoIP), and live anti-spam reputation scoring.
 4. **Email Hunter (`/api/osint/email/{address}`):**
-   - Domain parsing, MX record validation, SPF anti-spoofing audit, Gravatar MD5/SHA256 avatar resolution, and verified OSINT dorks for breach discovery (Epieos, Hunter.io, Hudson Rock).
+   - Domain parsing, MX record validation, SPF/DMARC anti-spoofing audit, passive SMTP mailbox verification, live account probing, and data breach cross-referencing.
 
 ---
 

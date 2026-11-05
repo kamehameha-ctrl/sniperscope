@@ -880,8 +880,8 @@ async def get_phone_osint(
     phone_number: str,
     _operator: str = Depends(require_operator_auth),
 ):
-    """Analiza un número de teléfono con inteligencia forense, CNMC España, Listaspam y Dorks PhoneInfoga."""
-    result = analyze_phone_number(phone_number)
+    """Analiza un número de teléfono con inteligencia libphonenumber internacional y reputación en vivo."""
+    result = await analyze_phone_number(phone_number)
     return result
 
 
@@ -890,7 +890,7 @@ async def get_email_osint(
     email_address: str,
     _operator: str = Depends(require_operator_auth),
 ):
-    """Analiza una dirección de correo con inteligencia de dominios, MX/SPF, Gravatar, Epieos y Dorks."""
+    """Analiza una dirección de correo con inteligencia de dominios, MX/SPF, buzón SMTP, plataformas y brechas."""
     result = await analyze_email_address(email_address)
     return result
 

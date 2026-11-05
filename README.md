@@ -138,8 +138,8 @@ flowchart LR
   - **DGT / BOE Tablón Edictal** (Sanciones y Notificaciones)
   - **CNMV** (Comisión Nacional del Mercado de Valores)
   - **INE** (Frecuencia de Apellidos y Nombres)
-- **Phone Hunter:** International phone intelligence featuring CNMC Spain carrier routing, anti-spam database lookups (Listaspam), and PhoneInfoga dork generators.
-- **Email Hunter:** Domain intelligence, MX/SPF checks, Gravatar avatar extraction, Epieos, Hunter.io, and breach query dorks.
+- **Phone Hunter:** International phone intelligence featuring carrier routing, line type classification (Mobile/Fixed/VoIP), and live anti-spam reputation lookups.
+- **Email Hunter:** Domain intelligence, MX/SPF checks, passive SMTP mailbox verification, live account probing, and data breach correlation.
 
 ### 5. 39-Command Active CLI Playbook (OWASP Top 10: 2025)
 Parametrized, copy-to-clipboard commands pre-populated with discovered targets, IPs, and ports:

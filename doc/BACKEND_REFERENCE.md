@@ -81,14 +81,15 @@ backend/
 - Custom error message matching, redirect tracking, and HTTP status verification to eliminate false positive username claims.
 
 ### 2.9. [`phone_osint.py`](file:///c:/Users/kiike/desarrolloweb/backend/services/phone_osint.py) — Telephone Forensics
-- E.164 phone number formatting and country code extraction.
-- Spanish CNMC (Comisión Nacional de los Mercados y la Competencia) geographic and mobile operator block allocation.
-- Direct queries to anti-spam reputation services (Listaspam) and automated PhoneInfoga Google Dork generation.
+- E.164 phone number formatting, country detection, and Google libphonenumber integration across >200 countries.
+- Carrier allocation, line classification (Mobile, Fixed, VoIP, Toll-Free), and timezones.
+- Live spam reputation and complaint scoring via anti-spam engines.
 
 ### 2.10. [`email_osint.py`](file:///c:/Users/kiike/desarrolloweb/backend/services/email_osint.py) — Email Intelligence
-- Domain and mail exchange (MX) extraction with SPF anti-spoofing diagnostics.
-- Gravatar profile and avatar discovery using MD5 and SHA-256 email hashes.
-- Verified Google Hacking Dorks for cross-referencing against breach databases and OSINT search engines (Epieos, Hunter.io, Hudson Rock, IntelX).
+- Domain, provider identification, and mail exchange (MX) extraction with SPF/DMARC anti-spoofing diagnostics.
+- Passive SMTP mailbox verification (HELO -> MAIL FROM -> RCPT TO) with catch-all detection.
+- Live registered accounts probe across services (GitHub, Duolingo, WordPress/Gravatar, Archive.org).
+- Data breach cross-referencing and credential exposure auditing.
 
 ---
 
@@ -300,47 +301,115 @@ Streams real-time platform reconnaissance results via **Server-Sent Events (SSE)
   ```
 
 #### `GET /api/osint/phone/{phone_number}`
-Performs phone intelligence, carrier allocation, and spam database correlation.
+Performs deep phone intelligence using Google libphonenumber (>200 countries), carrier allocation, line classification (Mobile, Fixed, VoIP), and live spam reputation checks (Tellows).
 - **Header:** `X-SniperScope-Token: <token>`
 - **Path Parameter:** `phone_number` (string, required, e.g., `"+34612345678"`)
 - **Response (200 OK):**
   ```json
   {
-    "query": "+34612345678",
-    "valid": true,
-    "country_code": "34",
-    "country": "Spain",
-    "operator_spain": "Telefónica Móviles España, S.A.U.",
-    "phone_type": "Mobile",
-    "spam_reports": 0,
-    "dorks": [
+    "raw_query": "+34612345678",
+    "is_valid": true,
+    "country": "España",
+    "country_code": "ES",
+    "flag": "🇪🇸",
+    "dial_code": "+34",
+    "national_number": "612345678",
+    "e164_format": "+34612345678",
+    "international_format": "+34 612 34 56 78",
+    "national_format": "612 34 56 78",
+    "line_type": "Móvil / Celular",
+    "carrier": "Syma",
+    "network_codes": {
+      "mcc": "214",
+      "mnc": "07",
+      "imsi_routing": "214-07",
+      "standard": "ITU-T E.212"
+    },
+    "timezones": ["Europe/Madrid"],
+    "reputation": {
+      "status": "ALTO SPAM / TELEMARKETING AGRESIVO",
+      "risk_level": "CRITICAL",
+      "score": 8,
+      "score_label": "8/9 (Spam Crítico / Denuncias Masivas)",
+      "searches": "4.500",
+      "detail": "Puntuación de riesgo muy alta (8/9). Registra búsquedas recurrentes y quejas de usuarios."
+    },
+    "breaches": {
+      "exposed": true,
+      "count": 3,
+      "sources": ["Vietnamairlines.com (2025-06)", "1Win (2024-11)", "Instagram.com (2026-01)"],
+      "fields": ["username", "ip", "phone", "id"],
+      "risk_level": "HIGH",
+      "status_label": "EXPUESTO EN 3 FILTRACIONES MASIVAS"
+    },
+    "direct_messaging": {
+      "whatsapp_url": "https://wa.me/34612345678",
+      "telegram_url": "https://t.me/+34612345678"
+    },
+    "quick_checks": [
       {
-        "title": "PhoneInfoga Global Web Lookup",
-        "dork": "\"+34612345678\" OR \"34612345678\""
+        "name": "Sync.me",
+        "url": "https://sync.me/search/?number=%2B34612345678"
       }
     ]
   }
   ```
 
 #### `GET /api/osint/email/{email_address}`
-Performs email domain verification, SPF checks, Gravatar resolution, and breach search dorks.
+Performs email intelligence: mailbox delivery verification via passive SMTP handshake, disposable detection, DNS anti-spoofing (MX, SPF, DMARC), live registered accounts probe (GitHub, Duolingo, Gravatar/WordPress, Archive.org), and breach correlation via XposedOrNot.
 - **Header:** `X-SniperScope-Token: <token>`
 - **Path Parameter:** `email_address` (string, required, e.g., `"audit@example.com"`)
 - **Response (200 OK):**
   ```json
   {
     "email": "audit@example.com",
+    "username": "audit",
     "domain": "example.com",
-    "mx_records": ["mail.example.com"],
-    "spf_record": "v=spf1 mx ~all",
-    "gravatar": {
-      "exists": false,
-      "avatar_url": null
+    "provider": "Google Workspace / Gmail",
+    "domain_age": {
+      "created_date": "1991-05-02T04:00:00Z",
+      "expiration_date": "2027-05-03T04:00:00Z",
+      "registrar": "MarkMonitor Inc.",
+      "age_days": 12970,
+      "age_years": 35.5,
+      "age_label": "Registrado hace 35.5 año(s) (1991-05-02)",
+      "risk_level": "CLEAN",
+      "phishing_warning": null
     },
-    "dorks": [
+    "is_disposable": false,
+    "mailbox": {
+      "deliverable": true,
+      "status": "DELIVERABLE",
+      "label": "Buzón Activo (Confirmado en servidor MX)",
+      "smtp_code": 250
+    },
+    "dns": {
+      "mx_active": true,
+      "mx_hosts": ["aspmx.l.google.com"],
+      "has_spf": true,
+      "has_dmarc": true,
+      "dmarc_policy": "reject"
+    },
+    "registered_platforms": [
       {
-        "title": "Epieos & Digital Identity Footprint",
-        "url": "https://epieos.com/?q=audit@example.com"
+        "platform": "GitHub",
+        "found": true,
+        "username": "audit-dev",
+        "profile_url": "https://github.com/audit-dev",
+        "avatar_url": "https://avatars.githubusercontent.com/u/123456"
+      }
+    ],
+    "breaches": {
+      "exposed": true,
+      "count": 3,
+      "breaches": ["LinkedIn", "Canva", "Adobe"],
+      "risk_level": "HIGH",
+      "status_label": "EXPUESTO EN 3 FILTRACIONES MASIVAS"
+    },
+    "quick_links": [
+      {
+        "name": "Have I Been Pwned",
+        "url": "https://haveibeenpwned.com/account/audit%40example.com"
       }
     ]
   }

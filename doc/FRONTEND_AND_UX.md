@@ -166,8 +166,8 @@ classDiagram
   - **CNMV** (Comisión Nacional del Mercado de Valores)
   - **INE** (Frecuencia de Apellidos y Nombres)
   - Specialized Google Hacking Dorks for Spanish public administration.
-- **Tab 3: Phone Hunter:** International phone normalization, Spanish CNMC operator block allocation, Listaspam reputation checks, and PhoneInfoga dork queries.
-- **Tab 4: Email Hunter:** Domain extraction, MX/SPF checks, Gravatar avatar discovery, and breach search queries (Epieos, Hunter.io, Hudson Rock).
+- **Tab 3: Phone Hunter:** International phone normalization, operator allocation, line classification (Mobile/Fixed/VoIP), and live anti-spam reputation checks.
+- **Tab 4: Email Hunter:** Domain extraction, MX/SPF checks, passive SMTP mailbox verification, live account probing, and data breach queries.
 
 ### 2.9. Forensic Report Generator ([`ForensicReportModal.jsx`](file:///c:/Users/kiike/desarrolloweb/frontend/src/components/ForensicReportModal.jsx))
 - Generates 4 compliant forensic export formats with a single click:

@@ -411,7 +411,7 @@ export default function SherlockView({ onBackToEasm }) {
         >
           <Phone size={14} />
           <span>Phone Hunter</span>
-          <span className="text-[9px] px-1 py-0.2 bg-emerald-900/50 text-emerald-300 rounded border border-emerald-600/40 font-mono">PhoneInfoga</span>
+          <span className="text-[9px] px-1 py-0.2 bg-emerald-900/50 text-emerald-300 rounded border border-emerald-600/40 font-mono">Global Phone</span>
         </button>
 
         <button
@@ -425,7 +425,7 @@ export default function SherlockView({ onBackToEasm }) {
         >
           <Mail size={14} />
           <span>Email Hunter</span>
-          <span className="text-[9px] px-1 py-0.2 bg-sky-900/50 text-sky-300 rounded border border-sky-600/40 font-mono">Epieos</span>
+          <span className="text-[9px] px-1 py-0.2 bg-sky-900/50 text-sky-300 rounded border border-sky-600/40 font-mono">Email OSINT</span>
         </button>
       </div>
 
@@ -1004,14 +1004,14 @@ export default function SherlockView({ onBackToEasm }) {
         </div>
       )}
 
-      {/* TAB 3: PHONE HUNTER (PHONEINFOGA STYLE) */}
+      {/* TAB 3: PHONE HUNTER */}
       {osintTab === 'phone' && (
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 space-y-4 max-w-4xl mx-auto w-full">
           {/* Phone Search Form */}
           <div className="bg-[#0c1017] border border-[#1e2638] rounded p-4">
             <div className="flex items-center space-x-2 text-xs font-mono font-bold text-emerald-400 uppercase mb-2">
               <Phone size={15} />
-              <span>Intelligence Phone Recon (PhoneInfoga Style)</span>
+              <span>Intelligence Phone Recon</span>
             </div>
             <form onSubmit={handlePhoneSearch} className="flex gap-2 items-center">
               <input
@@ -1047,135 +1047,207 @@ export default function SherlockView({ onBackToEasm }) {
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
                 <div className="flex items-center justify-between border-b border-[#1e2638] pb-2">
                   <div className="flex items-center space-x-2">
-                    <span className="text-xl">📞</span>
+                    <span className="text-xl">{phoneData.flag || '📞'}</span>
                     <div>
                       <span className="font-mono font-bold text-slate-100 text-base">{phoneData.e164_format}</span>
-                      <span className="text-[11px] font-mono text-slate-500 ml-2">({phoneData.country})</span>
+                      <span className="text-[11px] font-mono text-slate-400 ml-2">
+                        {phoneData.country} ({phoneData.national_format})
+                      </span>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-700 text-[10px] font-mono font-bold rounded">
+                  <span className="px-2 py-0.5 bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 text-[10px] font-mono font-bold rounded">
                     {phoneData.line_type}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs font-mono">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono">
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">Country / Prefix:</span>
+                    <span className="text-slate-500 block text-[10px]">País y Prefijo:</span>
                     <span className="text-slate-200 font-bold">{phoneData.country} ({phoneData.dial_code})</span>
                   </div>
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">Location / Coverage:</span>
-                    <span className="text-slate-200 font-bold">{phoneData.location}</span>
+                    <span className="text-slate-500 block text-[10px]">Operador Asignado:</span>
+                    <span className="text-emerald-400 font-bold truncate block" title={phoneData.carrier}>
+                      {phoneData.carrier}
+                    </span>
                   </div>
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">Assigned Carrier (CNMC):</span>
-                    <span className="text-emerald-400 font-bold">{phoneData.operator_assigned}</span>
+                    <span className="text-slate-500 block text-[10px]">Red ITU-T (MCC / MNC):</span>
+                    <span className="text-purple-400 font-bold">
+                      {phoneData.network_codes?.mcc ? `MCC ${phoneData.network_codes.mcc} · MNC ${phoneData.network_codes.mnc}` : 'No disponible'}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
+                    <span className="text-slate-500 block text-[10px]">Zona Horaria:</span>
+                    <span className="text-slate-200 font-bold">
+                      {phoneData.timezones?.join(', ') || 'UTC'}
+                    </span>
                   </div>
                 </div>
 
-                {/* Direct Messaging Actions without Saving Contact */}
+                {/* Direct Messaging Actions */}
                 <div className="pt-2 border-t border-[#1e2638] flex flex-wrap gap-2">
                   <a
                     href={phoneData.direct_messaging.whatsapp_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3 py-1.5 bg-[#064e3b] hover:bg-[#047857] text-[#a7f3d0] border border-[#10b981] rounded text-xs font-mono font-bold inline-flex items-center space-x-1.5 transition-colors"
+                    className="px-3 py-1.5 bg-[#064e3b] hover:bg-[#047857] text-[#a7f3d0] border border-[#10b981]/50 rounded text-xs font-mono font-bold inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
                   >
-                    <span>💬 Open Chat in WhatsApp Web</span>
+                    <span>💬 Chat WhatsApp Web (Directo)</span>
                     <ExternalLink size={11} />
                   </a>
                   <a
                     href={phoneData.direct_messaging.telegram_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3 py-1.5 bg-[#0f2438] hover:bg-[#15344f] text-[#38bdf8] border border-[#0284c7] rounded text-xs font-mono font-bold inline-flex items-center space-x-1.5 transition-colors"
+                    className="px-3 py-1.5 bg-[#0f2438] hover:bg-[#15344f] text-[#38bdf8] border border-[#0284c7]/50 rounded text-xs font-mono font-bold inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
                   >
-                    <span>✈️ Open Profile in Telegram</span>
+                    <span>✈️ Abrir Telegram</span>
                     <ExternalLink size={11} />
                   </a>
                 </div>
               </div>
 
-              {/* Reputation & Phone SPAM Databases */}
-              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2">
-                <div className="text-xs font-mono font-bold text-slate-300 uppercase">
-                  Reputation, Complaint & Phone SPAM Databases
+              {/* Live Spam Reputation & Complaints Card */}
+              {phoneData.reputation && (
+                <div className={`p-4 rounded border text-xs font-mono space-y-2 ${
+                  phoneData.reputation.risk_level === 'CRITICAL'
+                    ? 'bg-red-950/20 border-red-500/40'
+                    : phoneData.reputation.risk_level === 'MEDIUM'
+                    ? 'bg-amber-950/20 border-amber-500/40'
+                    : 'bg-[#0d1119] border-[#1e2638]'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm">🛡️</span>
+                      <span className="font-bold uppercase tracking-wider text-slate-200">
+                        Reputación y Denuncias de Spam Telefónico
+                      </span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      phoneData.reputation.risk_level === 'CRITICAL'
+                        ? 'bg-red-950 text-red-300 border-red-700'
+                        : phoneData.reputation.risk_level === 'MEDIUM'
+                        ? 'bg-amber-950 text-amber-300 border-amber-700'
+                        : 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                    }`}>
+                      {phoneData.reputation.status}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-300 font-sans leading-relaxed pt-1">
+                    {phoneData.reputation.detail}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-400">
+                    <span className="inline-flex items-center space-x-1">
+                      <span className="text-slate-500">Puntuación:</span>
+                      <span className="text-slate-200 font-bold">{phoneData.reputation.score_label}</span>
+                    </span>
+                    {phoneData.reputation.searches && phoneData.reputation.searches !== '0' && (
+                      <span className="inline-flex items-center space-x-1">
+                        <span className="text-slate-500">Búsquedas registradas:</span>
+                        <span className="text-sky-400 font-bold">{phoneData.reputation.searches}</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono pt-1">
-                  {phoneData.reputation_checks.map((rep, rIdx) => (
-                    <div
-                      key={rIdx}
-                      className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between"
-                    >
-                      <div>
-                        <span className="text-slate-200 font-bold block">{rep.name}</span>
-                        <span className="text-[10px] text-slate-500">{rep.description}</span>
-                      </div>
+              )}
+
+              {/* Phone Data Breaches (LeakCheck) */}
+              {phoneData.breaches && (
+                <div className={`p-4 rounded border text-xs font-mono space-y-2.5 ${
+                  phoneData.breaches.exposed
+                    ? 'bg-red-950/20 border-red-500/40'
+                    : 'bg-[#0d1119] border-[#1e2638]'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <AlertTriangle size={14} className={phoneData.breaches.exposed ? 'text-red-400' : 'text-emerald-400'} />
+                      <span className="font-bold uppercase tracking-wider text-slate-200">
+                        Auditoría de Filtraciones del Número Telefónico
+                      </span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      phoneData.breaches.exposed
+                        ? 'bg-red-950 text-red-300 border-red-700'
+                        : 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                    }`}>
+                      {phoneData.breaches.status_label}
+                    </span>
+                  </div>
+
+                  {phoneData.breaches.exposed ? (
+                    <div className="space-y-2 pt-1">
+                      {phoneData.breaches.fields?.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] text-slate-500 font-sans">Datos expuestos:</span>
+                          {phoneData.breaches.fields.map((fld, fIdx) => (
+                            <span
+                              key={fIdx}
+                              className="px-1.5 py-0.2 rounded bg-[#161d2b] border border-amber-500/40 text-amber-300 text-[10px] uppercase font-bold"
+                            >
+                              {fld}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {phoneData.breaches.sources?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          {phoneData.breaches.sources.map((src, sIdx) => (
+                            <span
+                              key={sIdx}
+                              className="px-2 py-0.5 rounded bg-[#10141d] border border-red-900/50 text-red-300 text-[10px]"
+                            >
+                              {src}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 font-sans">
+                      No constan apariciones de este número de teléfono en las bases de datos de credenciales filtradas.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Quick Verification Checks */}
+              {phoneData.quick_checks && (
+                <div className="bg-[#0d1119] border border-[#1e2638] rounded p-3 text-xs font-mono">
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold mb-2">
+                    Consultas Externas de Identidad:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {phoneData.quick_checks.map((check, cIdx) => (
                       <a
-                        href={rep.url}
+                        key={cIdx}
+                        href={check.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-2.5 py-1 bg-[#1a2333] hover:bg-[#28354f] text-slate-200 rounded text-[10px] inline-flex items-center space-x-1 transition-colors shrink-0"
+                        className="px-2.5 py-1 bg-[#151c28] hover:bg-[#1e2638] text-slate-300 hover:text-white border border-[#1e2638] rounded text-[11px] inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
                       >
-                        <span>Lookup</span>
-                        <ExternalLink size={9} />
+                        <span>{check.name}</span>
+                        <ExternalLink size={10} className="text-slate-500" />
                       </a>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              {/* PhoneInfoga Dorks */}
-              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2">
-                <div className="text-xs font-mono font-bold text-emerald-400 uppercase">
-                  PhoneInfoga Google Dorks (Number Footprint)
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono pt-1">
-                  {phoneData.phoneinfoga_dorks.map((d, dIdx) => (
-                    <div
-                      key={dIdx}
-                      className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between gap-2"
-                    >
-                      <div className="overflow-hidden">
-                        <span className="text-slate-400 text-[10px] block truncate">{d.title}</span>
-                        <code className="text-slate-200 text-[11px] block truncate">{d.dork}</code>
-                      </div>
-                      <div className="flex items-center space-x-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(d.dork)}
-                          title="Copy Dork"
-                          className="px-2 py-1 bg-[#151c28] hover:bg-[#1e2638] text-slate-300 rounded text-[10px] transition-colors"
-                        >
-                          {copiedUrl === d.dork ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
-                        </button>
-                        <a
-                          href={d.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2 py-1 bg-[#1a2333] hover:bg-emerald-900/60 text-emerald-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
-                        >
-                          <span>Launch</span>
-                          <ExternalLink size={9} />
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* TAB 4: EMAIL HUNTER (EPIEOS STYLE) */}
+      {/* TAB 4: EMAIL HUNTER */}
       {osintTab === 'email' && (
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 space-y-4 max-w-4xl mx-auto w-full">
           {/* Email Search Form */}
           <div className="bg-[#0c1017] border border-[#1e2638] rounded p-4">
             <div className="flex items-center space-x-2 text-xs font-mono font-bold text-sky-400 uppercase mb-2">
               <Mail size={15} />
-              <span>Forensic Email Recon (Epieos Style)</span>
+              <span>Forensic Email Recon</span>
             </div>
             <form onSubmit={handleEmailSearch} className="flex gap-2 items-center">
               <input
@@ -1214,149 +1286,220 @@ export default function SherlockView({ onBackToEasm }) {
                     <span className="text-xl">📧</span>
                     <div>
                       <span className="font-mono font-bold text-slate-100 text-base">{emailData.email}</span>
-                      <span className="text-[11px] font-mono text-slate-500 ml-2">(@{emailData.domain})</span>
+                      <span className="text-[11px] font-mono text-slate-400 ml-2">(@{emailData.domain})</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-1.5">
                     {emailData.is_disposable ? (
                       <span className="px-2 py-0.5 bg-red-950 text-red-300 border border-red-700 text-[10px] font-mono font-bold rounded flex items-center space-x-1">
                         <AlertTriangle size={10} />
-                        <span>DISPOSABLE / TEMPORARY EMAIL</span>
+                        <span>CORREO TEMPORAL / DESECHABLE</span>
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-700 text-[10px] font-mono font-bold rounded">
-                        VALID / STANDARD PROVIDER
+                      <span className="px-2 py-0.5 bg-sky-950 text-sky-300 border border-sky-700/60 text-[10px] font-mono font-bold rounded">
+                        {emailData.provider || 'DOMINIO ESTÁNDAR'}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Email DNS Parameters */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono">
+                {/* Email Verification, Domain Age & DNS Parameters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono">
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">MX Records (Active Mailbox):</span>
-                    <span className={emailData.dns.mx_active ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
-                      {emailData.dns.mx_active ? 'Active (Accepts incoming mail)' : 'No MX records found'}
+                    <span className="text-slate-500 block text-[10px]">Verificación de Buzón (SMTP):</span>
+                    <span className={`font-bold block truncate ${
+                      emailData.mailbox?.status === 'DELIVERABLE'
+                        ? 'text-emerald-400'
+                        : emailData.mailbox?.status === 'CATCH_ALL'
+                        ? 'text-sky-400'
+                        : emailData.mailbox?.status === 'UNDELIVERABLE'
+                        ? 'text-red-400'
+                        : 'text-amber-400'
+                    }`} title={emailData.mailbox?.label}>
+                      {emailData.mailbox?.label || 'No verificado'}
                     </span>
                   </div>
 
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">SPF Record (Antispoofing):</span>
-                    <span className={emailData.dns.has_spf ? 'text-sky-400 font-bold' : 'text-amber-400 font-bold'}>
-                      {emailData.dns.has_spf ? 'Configured' : 'Not detected'}
+                    <span className="text-slate-500 block text-[10px]">Antigüedad del Dominio:</span>
+                    <span className={`font-bold block truncate ${
+                      emailData.domain_age?.risk_level === 'CRITICAL'
+                        ? 'text-red-400 font-extrabold'
+                        : emailData.domain_age?.risk_level === 'MEDIUM'
+                        ? 'text-amber-400'
+                        : 'text-emerald-400'
+                    }`} title={emailData.domain_age?.age_label}>
+                      {emailData.domain_age?.age_label || 'No disponible'}
                     </span>
                   </div>
 
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">DMARC Policy:</span>
+                    <span className="text-slate-500 block text-[10px]">Seguridad SPF:</span>
+                    <span className={emailData.dns.has_spf ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                      {emailData.dns.has_spf ? 'Configurado' : 'No configurado'}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
+                    <span className="text-slate-500 block text-[10px]">Política DMARC:</span>
                     <span className="text-purple-400 font-bold uppercase">
-                      {emailData.dns.dmarc_policy ? `p=${emailData.dns.dmarc_policy}` : 'No DMARC policy'}
+                      {emailData.dns.dmarc_policy ? `p=${emailData.dns.dmarc_policy}` : 'Sin DMARC'}
                     </span>
                   </div>
                 </div>
 
-                {/* Detected Gravatar Profile */}
-                {emailData.gravatar?.found && (
-                  <div className="p-3 bg-[#061e2d] border border-sky-500/50 rounded flex items-center space-x-3 mt-2">
-                    {emailData.gravatar.avatar_url && (
-                      <img
-                        src={emailData.gravatar.avatar_url}
-                        alt="Gravatar Avatar"
-                        className="w-12 h-12 rounded-full border border-sky-400 shadow-md object-cover"
-                      />
-                    )}
-                    <div className="text-xs font-mono">
-                      <div className="text-sky-300 font-bold flex items-center space-x-1.5">
-                        <span>Gravatar Profile Detected</span>
-                        <CheckCircle2 size={13} className="text-emerald-400" />
-                      </div>
-                      {emailData.gravatar.display_name && (
-                        <div className="text-slate-200 text-sm font-bold mt-0.5">
-                          {emailData.gravatar.display_name}
-                        </div>
-                      )}
-                      {emailData.gravatar.location && (
-                        <div className="text-slate-400 text-[10px]">
-                          Location: {emailData.gravatar.location}
-                        </div>
-                      )}
-                    </div>
+                {/* Phishing Warning Banner */}
+                {emailData.domain_age?.phishing_warning && (
+                  <div className="p-2.5 rounded bg-red-950/40 border border-red-500/50 text-red-300 text-xs font-mono flex items-center space-x-2">
+                    <AlertTriangle size={14} className="text-red-400 shrink-0" />
+                    <span>{emailData.domain_age.phishing_warning}</span>
                   </div>
                 )}
               </div>
 
-              {/* Account Analysis & Breach Databases (Epieos, HIBP, IntelX) */}
-              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2">
-                <div className="text-xs font-mono font-bold text-slate-300 uppercase">
-                  Account Analysis & Breach Databases (Epieos / Breaches)
+              {/* Registered Accounts in Live Services (Holehe-style) */}
+              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-xs font-mono font-bold text-sky-400 uppercase">
+                    <CheckCircle2 size={14} className="text-emerald-400" />
+                    <span>Cuentas Registradas en Plataformas ({emailData.registered_platforms?.length || 0})</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono">Reconocimiento Anónimo en Vivo</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono pt-1">
-                  {emailData.investigation_links.map((link, lIdx) => (
-                    <div
-                      key={lIdx}
-                      className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between gap-2"
-                    >
-                      <div>
-                        <div className="flex items-center space-x-1.5">
-                          <span className="text-slate-200 font-bold">{link.name}</span>
-                          <span className={`text-[9px] px-1 py-0.2 rounded border font-mono font-bold ${link.badge_color}`}>
-                            {link.badge}
-                          </span>
+
+                {emailData.registered_platforms && emailData.registered_platforms.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+                    {emailData.registered_platforms.map((plat, pIdx) => (
+                      <div
+                        key={pIdx}
+                        className="p-3 bg-[#090b10] border border-[#1e2638] rounded flex items-center space-x-3"
+                      >
+                        {plat.avatar_url ? (
+                          <img
+                            src={plat.avatar_url}
+                            alt={plat.platform}
+                            className="w-10 h-10 rounded-full border border-sky-500/40 object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-[#151c28] border border-[#1e2638] flex items-center justify-center text-xs font-bold text-sky-400 shrink-0">
+                            {plat.platform.charAt(0)}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-200 font-bold text-xs font-mono">{plat.platform}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono font-bold">
+                              REGISTRADO
+                            </span>
+                          </div>
+                          {plat.username && (
+                            <span className="text-[11px] text-sky-400 font-mono truncate block">
+                              @{plat.username}
+                            </span>
+                          )}
+                          {plat.name && plat.name !== plat.username && (
+                            <span className="text-[10px] text-slate-400 truncate block">
+                              {plat.name}
+                            </span>
+                          )}
+                          {plat.details && (
+                            <span className="text-[10px] text-slate-500 truncate block">
+                              {plat.details}
+                            </span>
+                          )}
+                          {plat.profile_url && (
+                            <a
+                              href={plat.profile_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] text-slate-400 hover:text-white inline-flex items-center space-x-1 mt-1 transition-colors"
+                            >
+                              <span>Ver Perfil</span>
+                              <ExternalLink size={8} />
+                            </a>
+                          )}
                         </div>
-                        <span className="text-[10px] text-slate-500 block mt-0.5">{link.description}</span>
                       </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-[#090b10] border border-[#1e2638] rounded text-slate-500 text-xs font-mono">
+                    No se detectaron perfiles públicos activos en las plataformas auditadas (GitHub, Duolingo, WordPress, Gravatar, Archive.org).
+                  </div>
+                )}
+              </div>
+
+              {/* Data Breaches & Leaks (XposedOrNot) */}
+              {emailData.breaches && (
+                <div className={`p-4 rounded border text-xs font-mono space-y-2.5 ${
+                  emailData.breaches.exposed
+                    ? 'bg-red-950/20 border-red-500/40'
+                    : 'bg-[#0d1119] border-[#1e2638]'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <AlertTriangle size={14} className={emailData.breaches.exposed ? 'text-red-400' : 'text-emerald-400'} />
+                      <span className="font-bold uppercase tracking-wider text-slate-200">
+                        Auditoría de Brechas y Filtraciones Masivas
+                      </span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      emailData.breaches.exposed
+                        ? 'bg-red-950 text-red-300 border-red-700'
+                        : 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                    }`}>
+                      {emailData.breaches.status_label}
+                    </span>
+                  </div>
+
+                  {emailData.breaches.exposed && emailData.breaches.breaches?.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[11px] text-slate-400 block font-sans">
+                        Filtraciones documentadas en las que ha aparecido esta dirección:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-0.5">
+                        {emailData.breaches.breaches.map((bName, bIdx) => (
+                          <span
+                            key={bIdx}
+                            className="px-2 py-0.5 rounded bg-[#10141d] border border-red-900/50 text-red-300 text-[10px] font-mono"
+                          >
+                            {bName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!emailData.breaches.exposed && (
+                    <p className="text-[11px] text-slate-400 font-sans">
+                      No constan apariciones de este correo electrónico en las bases de datos públicas de credenciales comprometidas.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Quick Verification Actions */}
+              {emailData.quick_links && (
+                <div className="bg-[#0d1119] border border-[#1e2638] rounded p-3 text-xs font-mono">
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold mb-2">
+                    Pivotaje Externo de Identidad:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {emailData.quick_links.map((link, qIdx) => (
                       <a
+                        key={qIdx}
                         href={link.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-2.5 py-1 bg-[#1a2333] hover:bg-[#28354f] text-sky-400 hover:text-white rounded text-[10px] inline-flex items-center space-x-1 transition-colors shrink-0"
+                        className="px-2.5 py-1 bg-[#151c28] hover:bg-[#1e2638] text-slate-300 hover:text-white border border-[#1e2638] rounded text-[11px] inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
                       >
-                        <span>Investigate</span>
-                        <ExternalLink size={9} />
+                        <span>{link.name}</span>
+                        <ExternalLink size={10} className="text-slate-500" />
                       </a>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              {/* Email Dorks */}
-              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2">
-                <div className="text-xs font-mono font-bold text-sky-400 uppercase">
-                  Google Hacking Dorks (Email Footprint & Leaks)
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono pt-1">
-                  {emailData.email_dorks.map((d, dIdx) => (
-                    <div
-                      key={dIdx}
-                      className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between gap-2"
-                    >
-                      <div className="overflow-hidden">
-                        <span className="text-slate-400 text-[10px] block truncate">{d.title}</span>
-                        <code className="text-slate-200 text-[11px] block truncate">{d.dork}</code>
-                      </div>
-                      <div className="flex items-center space-x-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(d.dork)}
-                          title="Copy Dork"
-                          className="px-2 py-1 bg-[#151c28] hover:bg-[#1e2638] text-slate-300 rounded text-[10px] transition-colors"
-                        >
-                          {copiedUrl === d.dork ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
-                        </button>
-                        <a
-                          href={d.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2 py-1 bg-[#1a2333] hover:bg-sky-900/60 text-sky-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
-                        >
-                          <span>Launch</span>
-                          <ExternalLink size={9} />
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>
