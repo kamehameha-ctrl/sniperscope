@@ -40,6 +40,7 @@ from services.sherlock_data import SITES_DATABASE, CATEGORIES
 from services.sherlock_engine import stream_sherlock_scan, validate_username
 from services.phone_osint import analyze_phone_number
 from services.email_osint import analyze_email_address
+from services.ip_intel import classify_and_geolocate_ip, analyze_unproxied_hosts
 
 app = FastAPI(
     title="SniperScope EASM & Forensic API",
@@ -153,38 +154,38 @@ def _evaluate_risk_and_findings(
     crit_vulns = [v for v in cve_list if v.get("severity") == "CRITICAL"]
     high_vulns = [v for v in cve_list if v.get("severity") == "HIGH"]
 
-    # 1. Exposiciones críticas en rutas web (/.git, /.env)
+    # 1. Exposiciones críticas directas de archivos confidenciales (/.git, /.env)
     exposed_paths = http_res.get("exposed_paths", [])
     crit_paths = [p["path"] for p in exposed_paths if p.get("kind") in ("critical_git", "critical_env")]
     if crit_paths:
-        score += 40
+        score += 20
         findings.append({
             "severity": "CRITICAL",
-            "title": f"Critical Exposure of Sensitive Files ({', '.join(crit_paths)})",
-            "detail": "Public access detected to repository or sensitive configuration files on the web server."
+            "title": f"Critical Exposure of Sensitive Repositories / Files ({', '.join(crit_paths)})",
+            "detail": "Public access detected to repository metadata or configuration secrets on the web server."
         })
 
-    # 2. CISA KEV
+    # 2. Vulnerabilidades en el catálogo CISA KEV (Explotación activa documentada)
     if kev_vulns:
-        score += 35
+        score += 20
         findings.append({
             "severity": "CRITICAL",
             "title": f"{len(kev_vulns)} Vulnerability(ies) in CISA KEV Catalog (Active Exploitation)",
             "detail": f"Actively exploited in-the-wild CVEs detected: {', '.join(v['cve'] for v in kev_vulns[:5])}."
         })
 
-    # 3. Ransomware
+    # 3. Vectores asociados a campañas de Ransomware
     if ransom_vulns:
-        score += 15
+        score += 10
         findings.append({
-            "severity": "CRITICAL",
+            "severity": "HIGH",
             "title": "Exposure to Documented Ransomware Vectors",
-            "detail": f"At least {len(ransom_vulns)} CVE(s) are associated with ransomware campaigns."
+            "detail": f"At least {len(ransom_vulns)} CVE(s) are associated with known ransomware exploitation."
         })
 
-    # 4. CVEs Críticas
+    # 4. CVEs Críticas y Altas
     if crit_vulns:
-        score += min(35, len(crit_vulns) * 8)
+        score += min(20, len(crit_vulns) * 6)
         findings.append({
             "severity": "CRITICAL",
             "title": f"{len(crit_vulns)} CRITICAL Severity Vulnerability(ies) (CVSS >= 9.0)",
@@ -192,105 +193,114 @@ def _evaluate_risk_and_findings(
         })
 
     if high_vulns:
-        score += min(20, len(high_vulns) * 3)
+        score += min(12, len(high_vulns) * 3)
 
-    # 5. Puertos sensibles de administración/bases de datos expuestos
-    sensitive_ports = {
-        21: "FTP", 22: "SSH", 23: "Telnet", 445: "SMB",
-        1433: "MSSQL", 3306: "MySQL", 3389: "RDP",
-        5432: "PostgreSQL", 6379: "Redis", 27017: "MongoDB"
+    # 5. Puertos importantes expuestos a Internet (Bases de datos y protocolos de administración)
+    crit_ports = {
+        23: "Telnet (Plaintext)", 445: "SMB", 1433: "MSSQL",
+        3306: "MySQL", 3389: "RDP", 5432: "PostgreSQL",
+        6379: "Redis", 27017: "MongoDB", 9200: "Elasticsearch"
     }
+    admin_ports = {21: "FTP", 22: "SSH"}
+
+    exposed_crit = []
     exposed_admin = []
     for h in shodan_hosts:
         for p in h.get("ports", []):
-            if p in sensitive_ports:
-                exposed_admin.append(f"{p}/{sensitive_ports[p]} ({h.get('ip')})")
-    if exposed_admin:
-        score += 12
+            if p in crit_ports:
+                exposed_crit.append(f"{p}/{crit_ports[p]}")
+            elif p in admin_ports:
+                exposed_admin.append(f"{p}/{admin_ports[p]}")
+
+    if exposed_crit:
+        score += min(15, len(exposed_crit) * 8)
         findings.append({
             "severity": "HIGH",
-            "title": "Administrative / Database Services Exposed to Internet",
-            "detail": f"Sensitive ports publicly accessible: {', '.join(exposed_admin[:6])}."
+            "title": "Publicly Accessible Database / Sensitive Service Ports",
+            "detail": f"Database or plaintext services exposed to the Internet: {', '.join(exposed_crit[:5])}."
         })
 
-    # 6. Fugas de versión en cabeceras HTTP
+    if exposed_admin:
+        score += min(5, len(exposed_admin) * 3)
+        findings.append({
+            "severity": "MEDIUM",
+            "title": "Direct Remote Administration Services Exposed",
+            "detail": f"Remote management services listening on public interface: {', '.join(exposed_admin[:4])}."
+        })
+
+    # 6. Observación de versiones en cabeceras HTTP
     if http_res.get("server") and any(ch.isdigit() for ch in http_res["server"]):
-        score += 5
+        score += 2
         findings.append({
-            "severity": "MEDIUM",
-            "title": f"Exact Version Disclosure in Web Header ({http_res['server']})",
-            "detail": "The web server reveals its exact version, enabling automated exploit fingerprinting."
+            "severity": "LOW",
+            "title": f"Web Server Version Disclosure ({http_res['server']})",
+            "detail": "The web server discloses its software version in response headers."
         })
 
-    # 7. CORS Permisivo y Cookies Inseguras
+    # 7. Políticas CORS permisivas y cookies
     if http_res.get("cors_policy") == "*":
-        score += 6
+        score += 3
         findings.append({
-            "severity": "MEDIUM",
-            "title": f"Permissive CORS Policy Detected (Access-Control-Allow-Origin: {http_res['cors_policy']})",
-            "detail": "The server allows cross-origin requests from arbitrary origins."
+            "severity": "LOW",
+            "title": "Permissive Wildcard CORS Policy (Access-Control-Allow-Origin: *)",
+            "detail": "The server allows cross-origin requests from any origin."
         })
 
     insecure_cookies = [c["name"] for c in http_res.get("cookies_audit", []) if not c.get("safe")]
     if insecure_cookies:
-        score += 5
+        score += 2
         findings.append({
-            "severity": "MEDIUM",
-            "title": f"Cookies Lacking HttpOnly/Secure Security Flags ({', '.join(insecure_cookies[:4])})",
-            "detail": "Issued cookies lack protective flags against XSS theft or in-transit interception."
+            "severity": "LOW",
+            "title": f"Cookies Lacking HttpOnly or Secure Flags ({', '.join(insecure_cookies[:3])})",
+            "detail": "Some issued cookies do not set standard HttpOnly / Secure flags."
         })
 
-    # 8. Cabeceras de seguridad web ausentes
+    # 8. Cabeceras de seguridad web ausentes (Higiene)
     missing_headers = [h["header"] for h in http_res.get("security_headers", []) if not h.get("present")]
     if missing_headers and http_res.get("reachable"):
-        score += 6
+        score += min(3, len(missing_headers))
         findings.append({
-            "severity": "MEDIUM",
-            "title": f"{len(missing_headers)} Missing HTTP Security Headers",
-            "detail": f"Not detected: {', '.join(missing_headers)}."
+            "severity": "LOW",
+            "title": f"Missing Web Security Headers ({len(missing_headers)})",
+            "detail": f"Recommended headers missing: {', '.join(missing_headers[:3])}."
         })
 
     # 9. Seguridad de correo SPF / DMARC
     email_sec = dns_res.get("email_security", {})
-    if not email_sec.get("has_spf") or not email_sec.get("has_dmarc"):
-        score += 7
-        missing_mail = []
-        if not email_sec.get("has_spf"):
-            missing_mail.append("SPF")
-        if not email_sec.get("has_dmarc"):
-            missing_mail.append("DMARC")
+    if not email_sec.get("has_spf") and not email_sec.get("has_dmarc"):
+        score += 3
         findings.append({
-            "severity": "MEDIUM",
-            "title": f"Email Domain Spoofing Risk (Missing {' & '.join(missing_mail)})",
-            "detail": "The domain lacks complete policies against email spoofing and phishing."
+            "severity": "LOW",
+            "title": "Missing Email Anti-Spoofing Configuration (SPF / DMARC)",
+            "detail": "The domain lacks SPF and DMARC policies against email spoofing."
         })
     elif email_sec.get("dmarc_policy") == "none":
-        score += 6
+        score += 2
         findings.append({
-            "severity": "MEDIUM",
-            "title": "Permissive DMARC Policy (p=none - Vulnerable to Phishing/Spoofing)",
-            "detail": "DMARC is configured in monitor mode p=none without blocking or quarantining forged sender emails."
+            "severity": "LOW",
+            "title": "Permissive DMARC Policy (p=none)",
+            "detail": "DMARC is set to p=none without quarantine or reject enforcement."
         })
 
-    # 10. Vulnerabilidades Críticas en Componentes Web / JavaScript (SCA)
+    # 10. Vulnerabilidades en Componentes Web / JavaScript (SCA)
     sca_findings = [v for v in cve_list if v.get("source") == "SCA Web Technology Audit"]
     if sca_findings:
-        score += min(25, len(sca_findings) * 5)
+        score += min(8, len(sca_findings) * 2)
         findings.append({
-            "severity": "HIGH",
-            "title": f"{len(sca_findings)} Web Component Vulnerability(ies) (SCA / XSS / Prototype Pollution)",
-            "detail": f"Outdated technologies with documented security flaws identified: {', '.join(set(v.get('service', '') for v in sca_findings[:3]))}."
+            "severity": "MEDIUM",
+            "title": f"Web Component Flaws Identified (SCA: {len(sca_findings)})",
+            "detail": f"Known vulnerabilities in client libraries: {', '.join(set(v.get('service', '') for v in sca_findings[:3]))}."
         })
 
     final_score = min(100, score)
     if final_score >= 75:
         grade, level = "F", "CRITICAL"
-    elif final_score >= 50:
+    elif final_score >= 56:
         grade, level = "D", "HIGH"
-    elif final_score >= 25:
-        grade, level = "C", "MEDIUM"
-    elif final_score >= 10:
-        grade, level = "B", "LOW"
+    elif final_score >= 36:
+        grade, level = "C", "MODERATE"
+    elif final_score >= 16:
+        grade, level = "B", "GOOD"
     else:
         grade, level = "A", "OPTIMAL"
 
@@ -627,12 +637,14 @@ async def scan_target(
         ips_to_query = dns_res.get("primary_ips", [])
 
     t_dns = _now_utc_ms()
+    primary_ip_str = clean_host if is_direct_ip else (ips_to_query[0] if ips_to_query else clean_host)
 
-    # Lanzar Shodan inmediatamente en paralelo con el resto de tareas de descubrimiento
+    # Lanzar Shodan y Geolocalización inmediatamente en paralelo con el resto de tareas de descubrimiento
     shodan_task = asyncio.create_task(_run_shodan_pipeline(ips_to_query))
+    geo_task = asyncio.create_task(classify_and_geolocate_ip(primary_ip_str))
 
-    subdomains, rdap_res, http_res, clean_shodan = await asyncio.gather(
-        subdomain_task, rdap_task, http_task, shodan_task, return_exceptions=True
+    subdomains, rdap_res, http_res, clean_shodan, geo_res = await asyncio.gather(
+        subdomain_task, rdap_task, http_task, shodan_task, geo_task, return_exceptions=True
     )
     t_discovery = _now_utc_ms()
     t_shodan = t_discovery
@@ -645,6 +657,24 @@ async def scan_target(
         http_res = {"reachable": False, "scan_mode": scan_mode, "security_headers": [], "raw_headers": {}, "tls": {}, "exposed_paths": [], "cookies_audit": []}
     if isinstance(clean_shodan, Exception):
         clean_shodan = []
+    if isinstance(geo_res, Exception) or not isinstance(geo_res, dict):
+        geo_res = {
+            "ip": primary_ip_str,
+            "country": "Desconocido",
+            "country_code": "UN",
+            "flag": "🌐",
+            "city": "Desconocido",
+            "region": "Desconocido",
+            "coordinates": {"lat": 0.0, "lon": 0.0},
+            "isp": "Desconocido",
+            "asn": "Desconocido",
+            "asn_name": "Desconocido",
+            "infra_provider": "Desconocido",
+            "infra_category": "Host de Red",
+            "is_cdn": False,
+            "is_hosting": True,
+            "is_anycast": False,
+        }
 
     # Resolver IPs de los primeros subdominios y enriquecer CVEs en paralelo
     raw_vulns_map: Dict[str, Dict[str, Any]] = {}
@@ -731,6 +761,7 @@ async def scan_target(
     kev_count = sum(1 for v in cve_list if v.get("kev"))
 
     risk_assessment = _evaluate_risk_and_findings(cve_list, clean_shodan, dns_res, http_res)
+    perimeter_analysis = analyze_unproxied_hosts(geo_res, dns_res, subdomain_ips)
 
     execution_trace = _build_execution_trace(
         clean_host=clean_host,
@@ -766,6 +797,8 @@ async def scan_target(
         "rdap_ip": rdap_res if is_direct_ip else {},
         "http_audit": http_res,
         "shodan": clean_shodan,
+        "geo": geo_res,
+        "perimeter_hosts": perimeter_analysis,
         "summary": {
             "subdomains_count": len(subdomains),
             "ips_count": len(ips_to_query),

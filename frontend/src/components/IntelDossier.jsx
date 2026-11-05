@@ -234,6 +234,8 @@ export default function IntelDossier({
     subdomains = [],
     subdomain_ips = [],
     vulnerabilities = [],
+    geo = {},
+    perimeter_hosts = {},
   } = scanData;
 
   const filteredVulns = vulnerabilities.filter((v) => {
@@ -338,6 +340,35 @@ export default function IntelDossier({
                     <span> · Registrar: <span className="text-slate-300">{rdap_domain.registrar}</span></span>
                   )}
                 </div>
+
+                {/* Geolocation & Infrastructure Classification */}
+                {geo?.country && geo.country !== 'Desconocido' && (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-[#1e2638] text-[11px] font-mono">
+                    <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] text-slate-200">
+                      <span>{geo.flag || '🌐'}</span>
+                      <span className="font-semibold">
+                        {geo.city && geo.city !== 'Desconocido' ? `${geo.city}, ` : ''}{geo.country}
+                      </span>
+                    </span>
+                    {geo.infra_provider && geo.infra_provider !== 'Desconocido' && (
+                      <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] text-slate-300">
+                        <span className="text-slate-500">Host:</span>
+                        <span className="text-[#38bdf8] font-semibold">{geo.infra_provider}</span>
+                        <span className="text-slate-500 text-[10px]">({geo.infra_category})</span>
+                      </span>
+                    )}
+                    {geo.asn && geo.asn !== 'Desconocido' && geo.asn !== 'Private' && (
+                      <span className="px-2 py-0.5 rounded bg-[#101929] border border-[#1e2638] text-slate-400 text-[10px]">
+                        {geo.asn}
+                      </span>
+                    )}
+                    {geo.is_anycast && (
+                      <span className="px-1.5 py-0.5 rounded bg-purple-950/60 border border-purple-500/40 text-purple-300 text-[10px] font-bold">
+                        BGP ANYCAST
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Global Risk Score Badge */}
@@ -440,6 +471,51 @@ export default function IntelDossier({
               </div>
               <span className="text-[11px] text-slate-500">{shodan.length} host(s) audited</span>
             </div>
+
+            {/* Associated Hosts Outside CDN Network */}
+            {perimeter_hosts?.has_unproxied_hosts && (
+              <div className="bg-[#0c121d] border border-[#38bdf8]/30 rounded p-3 text-xs font-mono space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-[#38bdf8] font-bold">
+                    <Globe size={14} />
+                    <span className="uppercase tracking-wider">
+                      Associated Hosts Outside {perimeter_hosts.cdn_provider} Network
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-sans">
+                    Perimeter Intelligence
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
+                  The primary target is routed through <span className="text-slate-200 font-semibold">{perimeter_hosts.cdn_provider}</span>. The following infrastructure hosts associated with the target domain resolve outside the CDN network:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+                  {perimeter_hosts.unproxied_hosts.map((h, i) => (
+                    <div
+                      key={i}
+                      className="p-2.5 rounded bg-[#07090e] border border-[#1e2638] flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0 pr-1">
+                        <div className="font-bold text-white font-mono text-xs">{h.ip}</div>
+                        <div className="text-[10px] text-slate-500 truncate" title={h.source}>
+                          {h.source}
+                        </div>
+                      </div>
+                      {onRefreshScan && (
+                        <button
+                          type="button"
+                          onClick={() => onRefreshScan(h.ip)}
+                          title={`Audit host ${h.ip}`}
+                          className="px-2 py-1 text-[10px] bg-[#151c28] hover:bg-[#1e2638] text-[#38bdf8] hover:text-white border border-[#1e2638] rounded transition-colors cursor-pointer shrink-0"
+                        >
+                          Audit Host
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {shodan.length === 0 ? (
               <div className="bg-[#0d1119] border border-[#1e2638] p-4 rounded text-slate-500">

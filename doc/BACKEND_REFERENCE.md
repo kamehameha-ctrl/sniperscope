@@ -215,6 +215,29 @@ Orchestrates the full parallel attack surface intelligence pipeline.
       "cookies_audit": []
     },
     "shodan": [],
+    "geo": {
+      "ip": "93.184.215.14",
+      "country": "United States",
+      "country_code": "US",
+      "flag": "🇺🇸",
+      "city": "Norwell",
+      "region": "Massachusetts",
+      "coordinates": { "lat": 42.15, "lon": -70.82 },
+      "isp": "MCI Communications Services",
+      "asn": "AS15133",
+      "asn_name": "Edgecast Inc.",
+      "infra_provider": "Verizon Digital Media",
+      "infra_category": "CDN / Edge Platform",
+      "is_cdn": true,
+      "is_hosting": true,
+      "is_anycast": true
+    },
+    "perimeter_hosts": {
+      "is_behind_cdn": true,
+      "cdn_provider": "Verizon Digital Media",
+      "unproxied_hosts": [],
+      "has_unproxied_hosts": false
+    },
     "summary": {
       "subdomains_count": 2,
       "ips_count": 1,
