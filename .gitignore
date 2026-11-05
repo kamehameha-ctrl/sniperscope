@@ -18,6 +18,8 @@ __pycache__/
 *$py.class
 *.so
 .pytest_cache/
+.cache/
+backend/.cache/
 
 # Node & Frontend
 node_modules/

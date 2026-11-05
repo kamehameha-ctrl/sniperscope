@@ -41,6 +41,7 @@ from services.sherlock_engine import stream_sherlock_scan, validate_username
 from services.phone_osint import analyze_phone_number
 from services.email_osint import analyze_email_address
 from services.ip_intel import classify_and_geolocate_ip, analyze_unproxied_hosts
+from services.brand_protection import audit_brand_lookalikes
 
 app = FastAPI(
     title="SniperScope EASM & Forensic API",
@@ -533,7 +534,7 @@ async def health_check():
     proxy_val = os.getenv("OUTBOUND_PROXY", "").strip()
     return {
         "status": "healthy",
-        "engine": "SniperScope v3.1",
+        "engine": "SniperScope v3.6",
         "shodan_configured": bool(api_key and api_key != "tu_api_key_aqui"),
         "proxy_configured": bool(proxy_val),
         "proxy_active": is_proxy_reachable(proxy_val),
@@ -617,7 +618,7 @@ async def scan_target(
     is_direct_ip = _is_ip(clean_host)
     scan_timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    # PIPELINE PARALELO DE BAJA LATENCIA:
+    # Parallel discovery pipeline
     http_task = asyncio.create_task(inspect_http_headers(clean_host, scan_mode=scan_mode))
     rdap_task = asyncio.create_task(
         fetch_rdap_ip(clean_host) if is_direct_ip else fetch_rdap_domain(clean_host)
@@ -625,6 +626,15 @@ async def scan_target(
     subdomain_task = asyncio.create_task(
         asyncio.sleep(0, result=[]) if is_direct_ip else fetch_subdomains(clean_host)
     )
+    async def _safe_brand_audit(host: str) -> Dict[str, Any]:
+        if is_direct_ip:
+            return {}
+        try:
+            return await asyncio.wait_for(audit_brand_lookalikes(host, max_candidates=15), timeout=3.5)
+        except Exception:
+            return {}
+
+    brand_task = asyncio.create_task(_safe_brand_audit(clean_host))
 
     if is_direct_ip:
         dns_res = {"records": {}, "primary_ips": [clean_host], "email_security": {}}
@@ -639,12 +649,12 @@ async def scan_target(
     t_dns = _now_utc_ms()
     primary_ip_str = clean_host if is_direct_ip else (ips_to_query[0] if ips_to_query else clean_host)
 
-    # Lanzar Shodan y Geolocalización inmediatamente en paralelo con el resto de tareas de descubrimiento
+    # Launch Shodan, Geo, and Brand tasks concurrently
     shodan_task = asyncio.create_task(_run_shodan_pipeline(ips_to_query))
     geo_task = asyncio.create_task(classify_and_geolocate_ip(primary_ip_str))
 
-    subdomains, rdap_res, http_res, clean_shodan, geo_res = await asyncio.gather(
-        subdomain_task, rdap_task, http_task, shodan_task, geo_task, return_exceptions=True
+    subdomains, rdap_res, http_res, clean_shodan, geo_res, brand_res = await asyncio.gather(
+        subdomain_task, rdap_task, http_task, shodan_task, geo_task, brand_task, return_exceptions=True
     )
     t_discovery = _now_utc_ms()
     t_shodan = t_discovery
@@ -745,6 +755,42 @@ async def scan_target(
         subdomain_ips = []
 
     t_cvedb = _now_utc_ms()
+
+    # Ensure each CVE is only bound to ports running that specific service (prevent false multi-port attribution)
+    for cve_item in cve_list:
+        cve_text = f"{cve_item.get('cve', '')} {cve_item.get('product', '')} {cve_item.get('vendor', '')} {cve_item.get('summary', '')}".lower()
+        refined_ports = []
+        for s_entry in clean_shodan:
+            for s in s_entry.get("services", []):
+                s_port = s.get("port")
+                s_prod = (s.get("product") or "").lower()
+                s_mod = (s.get("module") or "").lower()
+                s_vulns = [v.upper() for v in s.get("vulns", [])]
+
+                if cve_item.get("cve", "").upper() in s_vulns:
+                    if s_port and s_port not in refined_ports:
+                        refined_ports.append(s_port)
+                elif "nginx" in cve_text and ("nginx" in s_prod or s_port in (80, 443)):
+                    if s_port and s_port not in refined_ports:
+                        refined_ports.append(s_port)
+                elif "apache" in cve_text and ("apache" in s_prod or s_port in (80, 443)):
+                    if s_port and s_port not in refined_ports:
+                        refined_ports.append(s_port)
+                elif ("openssh" in cve_text or "ssh" in cve_text) and ("ssh" in s_mod or "openssh" in s_prod or s_port == 22):
+                    if s_port and s_port not in refined_ports:
+                        refined_ports.append(s_port)
+                elif "http/2" in cve_text and (s_port in (80, 443, 8080, 8443) or "http" in s_mod):
+                    if s_port and s_port not in refined_ports:
+                        refined_ports.append(s_port)
+
+        if refined_ports:
+            cve_item["ports"] = sorted(refined_ports)
+        elif len(cve_item.get("ports", [])) > 2 and not any(p in cve_item["ports"] for p in (80, 443)):
+            cve_item["ports"] = []
+
+        if not cve_item.get("service") or cve_item.get("service") == "Host Service":
+            cve_item["service"] = cve_item.get("product") or "Host Service"
+
     enriched_by_id = {item["cve"]: item for item in cve_list}
 
     for s_entry in clean_shodan:
@@ -811,12 +857,13 @@ async def scan_target(
             "kev_vulns": kev_count,
         },
         "vulnerabilities": cve_list,
+        "brand_protection": brand_res if isinstance(brand_res, dict) else {},
         "execution_trace": execution_trace,
     }
 
     result["graph"] = build_attack_surface_graph(result)
 
-    # Guardar en caché
+    # Cache scan result
     _SCAN_CACHE[cache_key] = (time.time(), result)
 
     return result
@@ -880,7 +927,7 @@ async def get_phone_osint(
     phone_number: str,
     _operator: str = Depends(require_operator_auth),
 ):
-    """Analiza un número de teléfono con inteligencia libphonenumber internacional y reputación en vivo."""
+    """Analyzes a phone number using Google libphonenumber, carrier allocation, line classification, and live reputation."""
     result = await analyze_phone_number(phone_number)
     return result
 
@@ -890,7 +937,20 @@ async def get_email_osint(
     email_address: str,
     _operator: str = Depends(require_operator_auth),
 ):
-    """Analiza una dirección de correo con inteligencia de dominios, MX/SPF, buzón SMTP, plataformas y brechas."""
+    """Analyzes an email address with passive mailbox SMTP delivery verification, domain MX/SPF, registered accounts, and breach checks."""
     result = await analyze_email_address(email_address)
     return result
+
+
+@app.get("/api/brand-protection")
+async def get_brand_protection(
+    domain: str = Query(..., description="Target brand or domain to audit for lookalike domains, active phishing campaigns, and typosquatting"),
+    _operator: str = Depends(require_operator_auth),
+):
+    """Audits lookalike domains, typosquatting mutations, target forensic campaign evidence, passive DNS, and generates RFC Takedown notices."""
+    clean_d = _clean_target(domain)
+    if not clean_d:
+        raise HTTPException(status_code=400, detail="Invalid or empty target domain")
+    return await audit_brand_lookalikes(clean_d)
+
 

@@ -1,4 +1,4 @@
-# SniperScope v3.5 // Backend Technical Reference (FastAPI & OSINT Engines)
+# SniperScope v3.6 // Backend Technical Reference (FastAPI & OSINT Engines)
 
 The **SniperScope** backend is built on **Python 3.11+**, **FastAPI**, and asynchronous I/O (`asyncio` + `httpx`), structured into specialized micro-services located within [`backend/services/`](file:///c:/Users/kiike/desarrolloweb/backend/services/).
 
@@ -140,7 +140,7 @@ System status check returning backend version and proxy status.
   ```json
   {
     "status": "healthy",
-    "engine": "SniperScope v3.1",
+    "engine": "SniperScope v3.6",
     "shodan_configured": true,
     "proxy_configured": true,
     "proxy_active": true
@@ -412,5 +412,46 @@ Performs email intelligence: mailbox delivery verification via passive SMTP hand
         "url": "https://haveibeenpwned.com/account/audit%40example.com"
       }
     ]
+  }
+  ```
+
+#### `GET /api/brand-protection`
+Detects typosquatting, lookalike domains, homoglyph attacks, and active phishing campaigns targeting or impersonating an enterprise brand. Investigates target domain forensics (RDAP/WHOIS, passive DNS, malicious co-hosting, global DNSBL/SURBL reputation feeds), flags confirmed malicious vs stealthy zero-day threats, ranks permutations by similarity and age, and generates formal RFC-compliant Abuse Takedown notices in English for registrar suspension.
+- **Header:** `X-SniperScope-Token: <token>`
+- **Query Parameter:** `domain` (string, required, e.g., `"zelvopicks.website"`)
+- **Response Shape:**
+  ```json
+  {
+    "target": "zelvopicks.website",
+    "target_forensics": {
+      "domain": "zelvopicks.website",
+      "severity": "CRITICAL",
+      "verdict": "CRITICAL ALERT: Domain confirmed on global phishing blocklists (SURBL Phishing URI Feed)...",
+      "reputation": {
+        "status": "CONFIRMED_MALICIOUS",
+        "badge": "CONFIRMED BLACKLISTED",
+        "color": "CRITICAL",
+        "description": "Domain actively flagged in global threat intelligence feeds (SURBL Phishing URI Feed)."
+      },
+      "created_date": "2026-10-20T17:24:08.213Z",
+      "age_days": 16,
+      "is_recent": true,
+      "recency_label": "Registered 16 days ago (Critical Alert: Disposable Burner Infrastructure!)",
+      "registrar": "NameCheap, Inc.",
+      "abuse_email": "abuse@namecheap.com",
+      "a_records": ["208.115.214.174"],
+      "mx_records": ["eforward1.registrar-servers.com"],
+      "primary_ip": "208.115.214.174",
+      "co_hosted_domains": ["adsale.site", "bokepindo.live"],
+      "ct_logs": [],
+      "screenshot_url": "https://s0.wp.com/mshots/v1/http://zelvopicks.website?w=900",
+      "takedown_notice": "================================================================================\nFORMAL TAKEDOWN NOTICE & EVIDENCE REPORT: MALICIOUS PHISHING INFRASTRUCTURE..."
+    },
+    "total_candidates_analyzed": 45,
+    "active_threats_count": 0,
+    "critical_count": 0,
+    "high_count": 0,
+    "inactive_sample_count": 45,
+    "findings": []
   }
   ```

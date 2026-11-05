@@ -291,6 +291,15 @@ async def query_shodan_ip(ip: str) -> Dict[str, Any]:
             # Asegurar que cualquier CVE en data["vulns"] esté registrada en vuln_details
             for cve_id in data["vulns"]:
                 if cve_id not in data["vuln_details"]:
+                    cve_upper = cve_id.upper()
+                    matched_ports = [
+                        s.get("port") for s in data["services"]
+                        if s.get("port") and (cve_id in s.get("vulns", []) or cve_upper in [v.upper() for v in s.get("vulns", [])])
+                    ]
+                    # Si es CVE de protocolo web conocida (ej. HTTP/2 Rapid Reset), asociar solo a puertos HTTP/HTTPS
+                    if not matched_ports and any(k in cve_upper for k in ["44487", "38606", "38545"]):
+                        matched_ports = [s.get("port") for s in data["services"] if s.get("port") in (80, 443, 8080, 8443) or "http" in (s.get("module") or "").lower()]
+
                     data["vuln_details"][cve_id] = {
                         "cve": cve_id,
                         "cvss": None,
@@ -298,7 +307,7 @@ async def query_shodan_ip(ip: str) -> Dict[str, Any]:
                         "severity": _calculate_severity_label(None, cve_id),
                         "summary": "",
                         "verified": False,
-                        "ports": data["ports"],
+                        "ports": sorted(matched_ports),
                         "service": "",
                         "ip": ip,
                         "references": [],
@@ -352,6 +361,14 @@ async def query_shodan_ip(ip: str) -> Dict[str, Any]:
             })
 
         for cve_id in data["vulns"]:
+            cve_upper = cve_id.upper()
+            matched_ports = [
+                s.get("port") for s in data["services"]
+                if s.get("port") and (cve_id in s.get("vulns", []) or cve_upper in [v.upper() for v in s.get("vulns", [])])
+            ]
+            if not matched_ports and any(k in cve_upper for k in ["44487", "38606", "38545"]):
+                matched_ports = [s.get("port") for s in data["services"] if s.get("port") in (80, 443, 8080, 8443) or "http" in (s.get("module") or "").lower()]
+
             data["vuln_details"][cve_id] = {
                 "cve": cve_id,
                 "cvss": None,
@@ -359,7 +376,7 @@ async def query_shodan_ip(ip: str) -> Dict[str, Any]:
                 "severity": _calculate_severity_label(None, cve_id),
                 "summary": "",
                 "verified": False,
-                "ports": data["ports"],
+                "ports": sorted(matched_ports),
                 "service": "",
                 "ip": ip,
                 "references": [],

@@ -182,7 +182,7 @@ export async function fetchPhoneOsint(phoneNumber) {
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error al analizar teléfono (${response.status})`);
+    throw new Error(errorData.detail || `Failed to analyze phone number (${response.status})`);
   }
   return response.json();
 }
@@ -193,8 +193,20 @@ export async function fetchEmailOsint(emailAddress) {
   });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Error al analizar correo electrónico (${response.status})`);
+    throw new Error(errorData.detail || `Failed to analyze email address (${response.status})`);
   }
   return response.json();
 }
+
+export async function fetchBrandProtection(domain) {
+  const response = await fetch(`/api/brand-protection?domain=${encodeURIComponent(domain)}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `Failed to audit brand protection (${response.status})`);
+  }
+  return response.json();
+}
+
 

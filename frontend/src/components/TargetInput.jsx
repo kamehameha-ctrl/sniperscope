@@ -11,13 +11,14 @@ export default function TargetInput({ onScan, isLoading, activeTarget, scanMode 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (target.trim() && !isLoading) {
-      onScan(target.trim());
+      // Re-triggering search ignores memory cache and performs a fresh live scan
+      onScan(target.trim(), true);
     }
   };
 
   const handleQuickTarget = (domain) => {
     setTarget(domain);
-    onScan(domain);
+    onScan(domain, true);
   };
 
   return (

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Server,
   Shield,
   ShieldAlert,
+  ShieldCheck,
   Globe,
   Terminal,
   CheckCircle2,
@@ -19,8 +20,12 @@ import {
   Trash2,
   RefreshCw,
   Zap,
-  Bug
+  Bug,
+  FileText,
+  X,
+  Camera
 } from 'lucide-react';
+import { fetchBrandProtection } from '../services/api';
 
 function SeverityBadge({ severity, cvss }) {
   const sev = (severity || 'MEDIUM').toUpperCase();
@@ -142,10 +147,43 @@ export default function IntelDossier({
   onClearRecent,
   onRefreshScan,
 }) {
-  const [cveFilter, setCveFilter] = useState('');
-  const [severityFilter, setSeverityFilter] = useState('ALL');
   const [activeSection, setActiveSection] = useState('all');
   const [activeCliTab, setActiveCliTab] = useState('all');
+  const [brandData, setBrandData] = useState(null);
+  const [brandLoading, setBrandLoading] = useState(false);
+  const [brandError, setBrandError] = useState(null);
+  const [selectedTakedown, setSelectedTakedown] = useState(null);
+  const [copiedNotice, setCopiedNotice] = useState(false);
+  const [screenshotNonce, setScreenshotNonce] = useState(0);
+
+  useEffect(() => {
+    if (scanData?.brand_protection && Object.keys(scanData.brand_protection).length > 0) {
+      setBrandData(scanData.brand_protection);
+    } else {
+      setBrandData(null);
+    }
+  }, [scanData?.target, scanData?.brand_protection]);
+
+  const handleAuditBrand = async () => {
+    if (!target) return;
+    setBrandLoading(true);
+    setBrandError(null);
+    try {
+      const data = await fetchBrandProtection(target);
+      setBrandData(data);
+    } catch (err) {
+      setBrandError(err.message || 'Error auditing brand protection');
+    } finally {
+      setBrandLoading(false);
+    }
+  };
+
+  const handleCopyTakedown = (text) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedNotice(true);
+    setTimeout(() => setCopiedNotice(false), 2000);
+  };
 
   if (!scanData) {
     return (
@@ -238,25 +276,15 @@ export default function IntelDossier({
     perimeter_hosts = {},
   } = scanData;
 
-  const filteredVulns = vulnerabilities.filter((v) => {
-    const matchesText =
-      v.cve.toLowerCase().includes(cveFilter.toLowerCase()) ||
-      (v.summary || '').toLowerCase().includes(cveFilter.toLowerCase()) ||
-      (v.service || '').toLowerCase().includes(cveFilter.toLowerCase()) ||
-      (v.product || '').toLowerCase().includes(cveFilter.toLowerCase());
-    if (severityFilter === 'KEV') return matchesText && Boolean(v.kev);
-    const matchesSev = severityFilter === 'ALL' || (v.severity || '').toUpperCase() === severityFilter;
-    return matchesText && matchesSev;
-  });
-
   const navItems = [
-    { id: 'all', label: 'Full Dossier' },
-    { id: 'services', label: `Ports & Services (${summary.open_ports_count || 0})` },
-    { id: 'vulns', label: `CVEs (${summary.vulnerabilities_count || 0})` },
-    { id: 'http', label: 'Web, TLS & WAF' },
-    { id: 'dns', label: `DNS & Subdomains (${summary.subdomains_count || 0})` },
-    { id: 'playbook', label: 'CLI Playbook' },
-    { id: 'dorks', label: 'OSINT Dorks' },
+    { id: 'all', label: 'Dossier', title: 'Full Dossier (All sections)', group: 'surface' },
+    { id: 'services', label: `Services (${summary.open_ports_count || 0})`, title: 'Open Ports & Services', group: 'surface' },
+    { id: 'http', label: 'Web & TLS', title: 'Web Security, TLS Certificate & WAF/CDN', group: 'surface' },
+    { id: 'dns', label: `DNS (${summary.subdomains_count || 0})`, title: 'DNS Zone Records & Subdomains', group: 'surface' },
+    { id: 'vulns', label: `CVEs (${summary.vulnerabilities_count || 0})`, title: 'Identified Vulnerabilities (Shodan CVEDB)', group: 'threats' },
+    { id: 'brand', label: `Brand${brandData ? ` (${brandData.active_threats_count > 0 ? brandData.active_threats_count : (brandData.target_forensics?.is_recent ? '⚠️' : '0')})` : ''}`, title: 'Brand Protection, Lookalikes & Phishing Forensics', group: 'threats' },
+    { id: 'dorks', label: 'Dorks', title: 'OSINT Google & Shodan Dorks', group: 'tools' },
+    { id: 'playbook', label: 'CLI', title: 'CLI Playbook & Exploitation Commands', group: 'tools' },
   ];
 
   const showSection = (sec) => activeSection === 'all' || activeSection === sec;
@@ -284,32 +312,31 @@ export default function IntelDossier({
   return (
     <div className="h-full flex flex-col bg-[#090b10] text-slate-200 select-text overflow-hidden">
       {/* Sub-barra de navegación rápida del Dossier */}
-      <div className="px-4 py-2 bg-[#0c1017] border-b border-[#1e2638] flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center space-x-1 overflow-x-auto">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
-              className={`px-2.5 py-1 text-[11px] font-mono rounded transition-colors cursor-pointer ${
-                activeSection === item.id
-                  ? 'bg-[#1e2638] text-white font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#141923]'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+      <div className="px-4 py-2 bg-[#0c1017] border-b border-[#1e2638] flex items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center space-x-1 overflow-x-auto py-0.5">
+          {navItems.map((item, idx) => {
+            const prevItem = navItems[idx - 1];
+            const isNewGroup = prevItem && prevItem.group !== item.group;
+            return (
+              <React.Fragment key={item.id}>
+                {isNewGroup && (
+                  <div className="h-3.5 w-px bg-[#1e2638] mx-1.5 self-center shrink-0" />
+                )}
+                <button
+                  onClick={() => setActiveSection(item.id)}
+                  title={item.title}
+                  className={`px-2.5 py-1 text-[11px] font-mono rounded transition-colors cursor-pointer shrink-0 ${
+                    activeSection === item.id
+                      ? 'bg-[#1e2638] text-white font-semibold'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-[#141923]'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              </React.Fragment>
+            );
+          })}
         </div>
-
-        {onRefreshScan && (
-          <button
-            onClick={() => onRefreshScan(target)}
-            title="Force live re-scan bypassing cache"
-            className="p-1.5 text-slate-400 hover:text-[#38bdf8] hover:bg-[#141923] rounded transition-colors cursor-pointer"
-          >
-            <RefreshCw size={13} />
-          </button>
-        )}
       </div>
 
       {/* Scrollable text content */}
@@ -739,49 +766,17 @@ export default function IntelDossier({
                 </h2>
               </div>
               <span className="text-[11px] text-slate-400">
-                Showing {filteredVulns.length} of {vulnerabilities.length} enriched CVEs
+                {vulnerabilities.length} enriched CVEs
               </span>
             </div>
 
-            {vulnerabilities.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 bg-[#0d1119] p-3 border border-[#1e2638] rounded">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search size={13} className="absolute left-2.5 top-2 text-slate-500" />
-                  <input
-                    type="text"
-                    value={cveFilter}
-                    onChange={(e) => setCveFilter(e.target.value)}
-                    placeholder="Filter by CVE, product, module or impact (e.g. mod_ssl, RCE, DoS, CVE-2024)..."
-                    className="w-full bg-[#07090e] border border-[#1e2638] pl-8 pr-3 py-1 text-xs text-slate-200 rounded focus:outline-none focus:border-[#38bdf8]"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-1">
-                  {['ALL', 'KEV', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((sev) => (
-                    <button
-                      key={sev}
-                      onClick={() => setSeverityFilter(sev)}
-                      className={`px-2 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
-                        severityFilter === sev
-                          ? 'bg-[#38bdf8] text-[#090b10]'
-                          : 'bg-[#121824] text-slate-400 hover:text-white border border-[#1e2638]'
-                      }`}
-                    >
-                      {sev === 'ALL' ? 'ALL' : sev === 'KEV' ? 'CISA KEV' : sev}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {filteredVulns.length === 0 ? (
+            {vulnerabilities.length === 0 ? (
               <div className="bg-[#0d1119] border border-[#1e2638] p-4 rounded text-slate-500">
-                {vulnerabilities.length === 0
-                  ? 'No public vulnerabilities associated with exposed services detected.'
-                  : 'No vulnerabilities match the current filter.'}
+                No public vulnerabilities associated with exposed services detected.
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredVulns.map((v) => (
+                {vulnerabilities.map((v) => (
                   <div
                     key={v.cve}
                     className={`bg-[#0d1119] border rounded p-4 space-y-2.5 transition-colors ${
@@ -1484,6 +1479,494 @@ export default function IntelDossier({
           </section>
         )}
 
+        {/* BRAND PROTECTION, LOOKALIKE DOMAINS & TAKEDOWN COORDINATION */}
+        {showSection('brand') && (
+          <section className="space-y-4">
+            {(() => {
+              const hasBrandThreats = Boolean(
+                brandData?.active_threats_count > 0 ||
+                (brandData?.target_forensics && (
+                  brandData.target_forensics.severity === 'CRITICAL' ||
+                  brandData.target_forensics.severity === 'HIGH' ||
+                  brandData.target_forensics.suspected_brand
+                ))
+              );
+              return (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1e2638] pb-2">
+                  <div className="flex items-center space-x-2">
+                    {hasBrandThreats ? (
+                      <ShieldAlert size={15} className="text-[#f87171]" />
+                    ) : (
+                      <ShieldCheck size={15} className="text-[#38bdf8]" />
+                    )}
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+                      Brand Protection, Lookalike Domains & Takedown Coordination
+                    </h2>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold border ${
+                      hasBrandThreats
+                        ? 'bg-red-950/70 border-red-500/40 text-red-300'
+                        : 'bg-[#0f1d2e] border-[#0284c7]/40 text-[#38bdf8]'
+                    }`}>
+                      {hasBrandThreats ? 'Anti-Phishing DRP' : 'Brand Defense DRP'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAuditBrand}
+                    disabled={brandLoading}
+                    className={`px-3 py-1 rounded text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors cursor-pointer border disabled:opacity-50 ${
+                      hasBrandThreats
+                        ? 'bg-red-950/40 hover:bg-red-900/60 text-red-200 border-red-700/60'
+                        : 'bg-[#131926] hover:bg-[#1e2638] text-slate-300 hover:text-white border-[#1e2638]'
+                    }`}
+                  >
+                    {brandLoading ? (
+                      <RefreshCw size={11} className="animate-spin" />
+                    ) : (
+                      <Shield size={11} />
+                    )}
+                    <span>{brandLoading ? 'Auditing...' : (brandData ? 'Re-Audit' : 'Audit')}</span>
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* Introductory Card when not audited yet */}
+            {!brandData && !brandLoading && (
+              <div className="bg-[#0c1017] border border-[#1e2638] rounded p-4 text-xs font-mono space-y-3">
+                <p className="text-slate-300 font-sans leading-relaxed text-xs">
+                  Proactively uncovers lookalike domains, typosquatting variants and visual homoglyphs (e.g. substitutions, transpositions, phishing keyword combos) targeting the brand <span className="text-white font-bold font-mono">{target}</span>. Resolves passive DNS (A/MX), ranks threats by recency and similarity, and prepares evidence packages for immediate takedowns.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAuditBrand}
+                  className="px-3.5 py-1.5 bg-[#131926] hover:bg-[#1e2638] text-slate-200 hover:text-white border border-[#1e2638] rounded text-xs font-mono font-bold flex items-center space-x-2 transition-colors cursor-pointer"
+                >
+                  <Shield size={13} className="text-[#38bdf8]" />
+                  <span>Audit</span>
+                </button>
+              </div>
+            )}
+
+            {brandLoading && (
+              <div className="p-8 bg-[#0c1017] border border-[#1e2638] rounded text-center space-y-2">
+                <RefreshCw size={20} className="animate-spin mx-auto text-red-400" />
+                <div className="text-xs font-mono text-slate-300 font-bold">Generating Permutations & Resolving Passive DNS...</div>
+                <div className="text-[11px] font-mono text-slate-500">
+                  Checking visual homoglyphs, typosquatting mutations, active mailboxes (MX) and WHOIS records.
+                </div>
+              </div>
+            )}
+
+            {brandError && (
+              <div className="p-3 bg-red-950/40 border border-red-800 rounded text-red-300 text-xs font-mono flex items-center space-x-2">
+                <AlertTriangle size={14} className="shrink-0" />
+                <span>{brandError}</span>
+              </div>
+            )}
+
+            {brandData && (
+              <div className="space-y-4">
+                {/* 1. TARGET IDENTITY & INFRASTRUCTURE DOSSIER */}
+                {brandData.target_forensics && (() => {
+                  const isThreat =
+                    brandData.target_forensics.severity === 'CRITICAL' ||
+                    brandData.target_forensics.severity === 'HIGH' ||
+                    Boolean(brandData.target_forensics.suspected_brand);
+
+                  return (
+                    <div className={`bg-[#0b0f17] rounded-lg overflow-hidden font-mono text-xs shadow-lg border ${
+                      isThreat ? 'border-red-500/40' : 'border-[#1e2638]'
+                    }`}>
+                      {/* Header */}
+                      <div className="bg-[#141b27] px-4 py-3 border-b border-[#1e2638] flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center space-x-2">
+                          {isThreat ? (
+                            <ShieldAlert size={16} className="text-red-400" />
+                          ) : (
+                            <ShieldCheck size={16} className="text-[#38bdf8]" />
+                          )}
+                          <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                            {isThreat ? 'Campaign Forensic Dossier' : 'Target Identity & Infrastructure'} // {brandData.target_forensics.domain}
+                          </h3>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase border ${
+                            brandData.target_forensics.severity === 'CRITICAL'
+                              ? 'bg-red-950 text-red-300 border-red-600'
+                              : brandData.target_forensics.severity === 'HIGH'
+                              ? 'bg-amber-950 text-amber-300 border-amber-600'
+                              : 'bg-[#0f2438] text-[#38bdf8] border-[#0369a1]'
+                          }`}>
+                            {isThreat
+                              ? `${brandData.target_forensics.severity} · ${brandData.target_forensics.is_recent ? 'Recent Campaign' : 'Active Threat'}`
+                              : 'Standard Infrastructure · Clean Domain'}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTakedown(brandData.target_forensics)}
+                          className={
+                            isThreat
+                              ? 'px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-xs font-bold inline-flex items-center space-x-1.5 shadow transition-all cursor-pointer'
+                              : 'px-2.5 py-1 bg-[#151c29] hover:bg-[#1e2638] border border-[#1e2638] hover:border-slate-600 text-slate-300 hover:text-white rounded text-xs font-mono inline-flex items-center space-x-1.5 transition-all cursor-pointer'
+                          }
+                          title={isThreat ? 'Generate RFC Abuse Takedown package' : 'Export RFC Abuse / Evidence notice'}
+                        >
+                          <FileText size={12} className={isThreat ? 'text-white' : 'text-slate-400'} />
+                          <span>{isThreat ? 'Generate Campaign Takedown' : 'Export RFC Notice'}</span>
+                        </button>
+                      </div>
+
+                    {/* Verdict Banner: displayed ONLY on active threat alerts (CRITICAL / HIGH / Impersonation) to avoid redundant noise */}
+                    {(brandData.target_forensics.severity === 'CRITICAL' ||
+                      brandData.target_forensics.severity === 'HIGH' ||
+                      brandData.target_forensics.suspected_brand) && (
+                      <div className={`p-3 border-b text-xs flex flex-wrap items-center justify-between gap-2 ${
+                        brandData.target_forensics.severity === 'CRITICAL'
+                          ? 'bg-red-950/40 border-red-500/30 text-red-200'
+                          : 'bg-amber-950/40 border-amber-500/30 text-amber-200'
+                      }`}>
+                        <div className="flex items-center space-x-2">
+                          <AlertTriangle size={15} className={brandData.target_forensics.severity === 'CRITICAL' ? 'text-red-400 shrink-0' : 'text-amber-400 shrink-0'} />
+                          <span className="font-semibold">{brandData.target_forensics.verdict}</span>
+                        </div>
+                        {brandData.target_forensics.suspected_brand && (
+                          <span className="px-2 py-0.5 rounded bg-red-900/60 border border-red-500 text-white text-[10px] font-bold shrink-0">
+                            Impersonation Target: {brandData.target_forensics.suspected_brand}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Global Threat Intelligence & Zero-Day Feed Status */}
+                    {brandData.target_forensics.reputation && (
+                      <div className={`p-2.5 px-3 border-b flex flex-wrap items-center justify-between gap-2 text-xs ${
+                        brandData.target_forensics.reputation.status === 'CONFIRMED_MALICIOUS'
+                          ? 'bg-red-950/60 border-red-500/40 text-red-200'
+                          : brandData.target_forensics.reputation.status === 'ZERO_DAY_SUSPECT'
+                          ? 'bg-amber-950/50 border-amber-500/40 text-amber-200'
+                          : 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
+                      }`}>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold tracking-wider uppercase text-[10px] px-1.5 py-0.5 rounded border border-current">
+                            {brandData.target_forensics.reputation.badge}
+                          </span>
+                          <span className="text-[11px] font-sans">{brandData.target_forensics.reputation.description}</span>
+                        </div>
+                        {brandData.target_forensics.reputation.status === 'CONFIRMED_MALICIOUS' && (
+                          <span className="text-[10px] uppercase font-bold text-red-400 bg-red-950 px-2 py-0.5 rounded border border-red-500/50">
+                            Active Abuse Blocklist
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Forensic Details Grid */}
+                    <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Left: Metadata & Infrastructure */}
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="p-2.5 bg-[#07090e] border border-[#1e2638] rounded">
+                            <span className="text-slate-500 block text-[10px] uppercase">Age</span>
+                            <span className={brandData.target_forensics.is_recent ? 'text-red-400 font-bold block' : 'text-slate-200 block'}>
+                              {brandData.target_forensics.created_date ? brandData.target_forensics.recency_label : 'Undeclared'}
+                            </span>
+                            {brandData.target_forensics.created_date && (
+                              <span className="text-slate-500 block text-[10px] mt-0.5">
+                                {brandData.target_forensics.created_date.split('T')[0]}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="p-2.5 bg-[#07090e] border border-[#1e2638] rounded">
+                            <span className="text-slate-500 block text-[10px] uppercase">Official Registrar</span>
+                            <span className="text-white font-bold block truncate" title={brandData.target_forensics.registrar}>
+                              {brandData.target_forensics.registrar}
+                            </span>
+                            <span className="text-slate-400 block text-[10px] mt-0.5 truncate" title={brandData.target_forensics.abuse_email}>
+                              Abuse: {brandData.target_forensics.abuse_email}
+                            </span>
+                          </div>
+
+                          <div className="p-2.5 bg-[#07090e] border border-[#1e2638] rounded">
+                            <span className="text-slate-500 block text-[10px] uppercase">Web Hosting (IPs)</span>
+                            <div className="flex items-center space-x-1.5 mt-0.5">
+                              <span className="text-sky-400 font-bold truncate">
+                                {brandData.target_forensics.a_records?.length > 0 ? brandData.target_forensics.a_records.join(', ') : 'No A records'}
+                              </span>
+                              {onRefreshScan && brandData.target_forensics.a_records?.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => onRefreshScan(brandData.target_forensics.a_records[0])}
+                                  title={`Audit IP ${brandData.target_forensics.a_records[0]}`}
+                                  className="text-[10px] text-slate-400 hover:text-sky-300 underline cursor-pointer"
+                                >
+                                  [Audit Host]
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="p-2.5 bg-[#07090e] border border-[#1e2638] rounded">
+                            <span className="text-slate-500 block text-[10px] uppercase">MX Mail Servers</span>
+                            <span className={brandData.target_forensics.mx_records?.length > 0 ? 'text-amber-400 font-bold block truncate' : 'text-slate-500 block'}>
+                              {brandData.target_forensics.mx_records?.length > 0 ? brandData.target_forensics.mx_records.join(', ') : 'No MX servers'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Co-hosting / Passive DNS */}
+                        {brandData.target_forensics.co_hosted_domains?.length > 0 && (
+                          <div className="p-2.5 bg-[#07090e] border border-[#1e2638] rounded space-y-1.5">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-slate-400 font-semibold uppercase text-[10px]">
+                                Co-Hosting / Passive DNS ({brandData.target_forensics.co_hosted_domains.length} domains on same IP):
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-mono">IP: {brandData.target_forensics.primary_ip}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                              {brandData.target_forensics.co_hosted_domains.map((dom, dIdx) => (
+                                <span key={dIdx} className="px-1.5 py-0.2 bg-[#121722] border border-[#1e2638] text-slate-300 text-[10px] rounded font-mono">
+                                  {dom}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: Live Visual Evidence & External Links */}
+                      <div className="p-2.5 bg-[#07090e] border border-[#1e2638] rounded flex flex-col justify-between space-y-2">
+                        <div className="flex items-center justify-between border-b border-[#1e2638] pb-1.5">
+                          <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-slate-300">
+                            <Camera size={13} className="text-sky-400" />
+                            <span>Visual Evidence (Live Screenshot)</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-[10px]">
+                            <button
+                              type="button"
+                              onClick={() => setScreenshotNonce((prev) => prev + 1)}
+                              title="Force screenshot refresh"
+                              className="text-slate-400 hover:text-white flex items-center space-x-1 cursor-pointer transition-colors"
+                            >
+                              <RefreshCw size={10} />
+                              <span>Refresh</span>
+                            </button>
+                            <a
+                              href={brandData.target_forensics.screenshot_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-400 hover:underline inline-flex items-center space-x-1"
+                            >
+                              <span>Expand</span>
+                              <ExternalLink size={10} />
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="relative w-full h-44 bg-[#040609] border border-[#1e2638] rounded overflow-hidden flex items-center justify-center">
+                          <img
+                            key={screenshotNonce}
+                            src={`${brandData.target_forensics.screenshot_url}${screenshotNonce ? `&v=${screenshotNonce}` : ''}`}
+                            alt={`Live snapshot of ${brandData.target_forensics.domain}`}
+                            className="w-full h-full object-cover object-top opacity-90 hover:opacity-100 transition-opacity"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const next = e.currentTarget.nextElementSibling;
+                              if (next) next.style.display = 'flex';
+                            }}
+                          />
+                          <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-3 text-center text-slate-400 text-[11px]">
+                            <span>Capture rendering or shielded by firewall.</span>
+                            <a
+                              href={`https://urlscan.io/search/#domain:${encodeURIComponent(brandData.target_forensics.domain)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-sky-400 hover:underline mt-1 inline-flex items-center space-x-1"
+                            >
+                              <span>Search forensic captures on urlscan.io</span>
+                              <ExternalLink size={10} />
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* Quick Forensic Pivot Buttons */}
+                        <div className="grid grid-cols-3 gap-1.5 pt-1 text-[10px]">
+                          <a
+                            href={`https://urlscan.io/search/#domain:${encodeURIComponent(brandData.target_forensics.domain)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1 bg-[#101520] hover:bg-[#1a2333] border border-[#1e2638] rounded text-slate-300 hover:text-white text-center transition-colors truncate"
+                          >
+                            urlscan.io
+                          </a>
+                          <a
+                            href={`https://www.virustotal.com/gui/domain/${encodeURIComponent(brandData.target_forensics.domain)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1 bg-[#101520] hover:bg-[#1a2333] border border-[#1e2638] rounded text-slate-300 hover:text-white text-center transition-colors truncate"
+                          >
+                            VirusTotal
+                          </a>
+                          <a
+                            href={`https://who.is/whois/${encodeURIComponent(brandData.target_forensics.domain)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1 bg-[#101520] hover:bg-[#1a2333] border border-[#1e2638] rounded text-slate-300 hover:text-white text-center transition-colors truncate"
+                          >
+                            Full WHOIS
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+                {/* 2. PROACTIVE BRAND CLONES & TYPOSQUATTING MONITORING */}
+                <div className="border-t border-[#1e2638] pt-3 space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Globe size={14} className="text-slate-400" />
+                    <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                      Proactive Brand Clones & Typosquatting Monitoring ({brandData.total_candidates_analyzed} Permutations Analyzed)
+                    </h3>
+                  </div>
+
+                  {/* KPI Metrics Summary */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                    <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
+                      <span className="text-slate-500 block text-[10px]">Analyzed Mutations:</span>
+                      <span className="text-slate-200 font-bold text-sm">{brandData.total_candidates_analyzed}</span>
+                    </div>
+                    <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
+                      <span className="text-slate-500 block text-[10px]">Active Threats (DNS):</span>
+                      <span className={`font-bold text-sm ${brandData.active_threats_count > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {brandData.active_threats_count}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
+                      <span className="text-slate-500 block text-[10px]">Critical Threats (Active MX):</span>
+                      <span className={`font-bold text-sm ${brandData.critical_count > 0 ? 'text-red-400 font-extrabold' : 'text-slate-400'}`}>
+                        {brandData.critical_count}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
+                      <span className="text-slate-500 block text-[10px]">Inactive Mutations:</span>
+                      <span className="text-slate-400 font-bold text-sm">{brandData.inactive_sample_count}</span>
+                    </div>
+                  </div>
+
+                  {/* Findings List */}
+                  {brandData.findings && brandData.findings.length > 0 ? (
+                    <div className="space-y-2">
+                      {brandData.findings.map((f, fIdx) => (
+                        <div
+                          key={fIdx}
+                          className={`p-3 rounded border text-xs font-mono space-y-2 transition-colors ${
+                            f.severity === 'CRITICAL'
+                              ? 'bg-[#180d10] border-red-500/50'
+                              : f.severity === 'HIGH'
+                              ? 'bg-[#18110b] border-amber-500/50'
+                              : 'bg-[#0d1119] border-[#1e2638]'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1e2638]/60 pb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm font-bold text-white font-mono">{f.domain}</span>
+                              <span className="px-1.5 py-0.2 rounded bg-[#101929] border border-sky-500/40 text-sky-300 text-[10px] font-bold">
+                                {f.similarity}% Match
+                              </span>
+                              <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border ${
+                                f.severity === 'CRITICAL'
+                                  ? 'bg-red-950 text-red-300 border-red-700'
+                                  : f.severity === 'HIGH'
+                                  ? 'bg-amber-950 text-amber-300 border-amber-700'
+                                  : 'bg-yellow-950 text-yellow-300 border-yellow-700'
+                              }`}>
+                                {f.severity}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedTakedown(f)}
+                                className="px-2.5 py-1 bg-[#1e2638] hover:bg-red-900/60 text-slate-200 hover:text-white border border-[#2d374d] rounded text-[11px] inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
+                              >
+                                <FileText size={11} className="text-red-400" />
+                                <span>Evidence & Takedown</span>
+                              </button>
+                              {onRefreshScan && f.a_records?.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => onRefreshScan(f.a_records[0])}
+                                  title={`Audit IP ${f.a_records[0]}`}
+                                  className="px-2 py-1 bg-[#151c28] hover:bg-[#1e2638] text-[#38bdf8] border border-[#1e2638] rounded text-[11px] transition-colors cursor-pointer"
+                                >
+                                  Audit Host
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-300">
+                            <div>
+                              <span className="text-slate-500 block text-[10px]">Mutation Type:</span>
+                              <span className="text-slate-200 font-semibold">{f.mutation_type}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block text-[10px]">Age:</span>
+                              <span className={f.is_recent ? 'text-red-400 font-bold' : 'text-slate-300'}>
+                                {f.recency_label}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block text-[10px]">Registrar (WHOIS):</span>
+                              <span className="text-slate-300 truncate block" title={f.registrar}>
+                                {f.registrar || 'Unknown'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Active Infrastructure Badges */}
+                          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#1e2638]/40 text-[11px]">
+                            {f.a_records?.length > 0 ? (
+                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-[#090b10] border border-[#1e2638] text-slate-200">
+                                <span className="text-slate-500">Web IP(s):</span>
+                                <span className="text-sky-400 font-bold">{f.a_records.join(', ')}</span>
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-[#090b10] border border-[#1e2638] text-slate-500">
+                                No Active Web
+                              </span>
+                            )}
+
+                            {f.mx_records?.length > 0 ? (
+                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/50 text-red-300 font-bold">
+                                <span>⚠️ Active MX Servers:</span>
+                                <span className="text-white">{f.mx_records.join(', ')}</span>
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-[#090b10] border border-[#1e2638] text-slate-500">
+                                No MX Servers
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-[#061e16] border border-emerald-500/40 rounded text-emerald-300 text-xs font-mono flex items-center space-x-2">
+                      <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                      <span>No additional lookalike mutations or registered clones were detected for {target}.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
         {/* 6. CLI PLAYBOOK FOR CYBERSECURITY ANALYSTS / PENTESTERS */}
         {showSection('playbook') && (
           <section className="space-y-4">
@@ -1878,59 +2361,83 @@ export default function IntelDossier({
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
                 <div className="flex items-center space-x-2 text-xs font-bold uppercase font-mono text-[#f87171]">
                   <Flame size={14} className="text-[#f87171]" />
-                  <span>Shodan Dorks (Shadow IT & Certificates)</span>
+                  <span>Shodan Dorks (Shadow IT, Origin IPs & Exposures)</span>
                 </div>
-                <p className="text-[11px] text-slate-400 font-sans">
-                  Discover satellite servers, staging environments, or target assets unlisted in official DNS:
-                </p>
-                <div className="space-y-2 pt-1 font-mono text-xs">
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">SSL Certificates / SANs</span>
-                      <code className="text-slate-200">ssl:"{target}"</code>
-                    </div>
-                    <a
-                      href={`https://www.shodan.io/search?query=ssl%3A%22${encodeURIComponent(target)}%22`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-xs">
+                  {[
+                    {
+                      title: 'Origin IP via SSL Subject CN',
+                      code: `ssl.cert.subject.cn:"${target}"`,
+                      query: `ssl.cert.subject.cn:"${target}"`,
+                    },
+                    {
+                      title: 'Full SSL Certificate Dump',
+                      code: `ssl:"${target}"`,
+                      query: `ssl:"${target}"`,
+                    },
+                    {
+                      title: 'Subdomains & Reverse DNS',
+                      code: `hostname:"${target}"`,
+                      query: `hostname:"${target}"`,
+                    },
+                    {
+                      title: 'Direct Target IP Services',
+                      code: `ip:"${primaryIp}"`,
+                      query: `ip:"${primaryIp}"`,
+                    },
+                    {
+                      title: 'Exposed Databases (SQL / NoSQL)',
+                      code: `hostname:"${target}" port:3306,5432,27017,6379,9200`,
+                      query: `hostname:"${target}" port:3306,5432,27017,6379,9200`,
+                    },
+                    {
+                      title: 'Admin & Login Dashboards',
+                      code: `ssl:"${target}" http.title:"Admin" OR "Login"`,
+                      query: `ssl:"${target}" http.title:"Admin" OR http.title:"Login" OR http.title:"Dashboard"`,
+                    },
+                    {
+                      title: 'Non-Standard Web & Dev Ports',
+                      code: `hostname:"${target}" -port:80,443 http.status:200`,
+                      query: `hostname:"${target}" -port:80,443 http.status:200`,
+                    },
+                    {
+                      title: 'Open Directory Listings',
+                      code: `hostname:"${target}" http.title:"Index of /"`,
+                      query: `hostname:"${target}" http.title:"Index of /"`,
+                    },
+                    ...(shodan[0]?.org
+                      ? [
+                          {
+                            title: 'Organization / ASN Range',
+                            code: `org:"${shodan[0].org}"`,
+                            query: `org:"${shodan[0].org}"`,
+                          },
+                        ]
+                      : []),
+                  ].map((dork, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between gap-2 overflow-hidden"
                     >
-                      <span>Launch Shodan</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Hostname / Reverse DNS</span>
-                      <code className="text-slate-200">hostname:"{target}"</code>
-                    </div>
-                    <a
-                      href={`https://www.shodan.io/search?query=hostname%3A%22${encodeURIComponent(target)}%22`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
-                    >
-                      <span>Launch Shodan</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
-                  {shodan[0]?.org && (
-                    <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                      <div>
-                        <span className="text-slate-500 block text-[10px]">Organization Range</span>
-                        <code className="text-slate-200">org:"{shodan[0].org}"</code>
+                      <div className="min-w-0 flex-1 pr-1">
+                        <span className="text-slate-500 block text-[10px] truncate" title={dork.title}>
+                          {dork.title}
+                        </span>
+                        <code className="text-slate-200 text-[11px] block break-all leading-tight mt-0.5">
+                          {dork.code}
+                        </code>
                       </div>
                       <a
-                        href={`https://www.shodan.io/search?query=org%3A%22${encodeURIComponent(shodan[0].org)}%22`}
+                        href={`https://www.shodan.io/search?query=${encodeURIComponent(dork.query)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-2.5 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                        className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0 whitespace-nowrap"
                       >
-                        <span>Launch Shodan</span>
+                        <span>Shodan</span>
                         <ExternalLink size={9} />
                       </a>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
 
@@ -1940,143 +2447,137 @@ export default function IntelDossier({
                   <Search size={14} className="text-[#facc15]" />
                   <span>Google Hacking / Reconnaissance Dorks</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 font-mono text-xs">
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Sensitive Files (.env, .sql, .log)</span>
-                      <code className="text-slate-200 text-[11px]">ext:env | ext:sql | ext:log</code>
-                    </div>
-                    <a
-                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+ext%3Aenv+OR+ext%3Asql+OR+ext%3Alog+OR+ext%3Abak+OR+ext%3Ayml`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-xs">
+                  {[
+                    {
+                      title: 'Config & Secrets (.env, .yml, .ini)',
+                      code: 'ext:env | ext:yml | ext:ini | inurl:.env',
+                      query: `site:${target} (ext:env OR ext:yaml OR ext:yml OR ext:ini OR inurl:".env")`,
+                    },
+                    {
+                      title: 'DB Dumps & Backups (.sql, .bak)',
+                      code: 'ext:sql | ext:bak | ext:old | ext:backup',
+                      query: `site:${target} (ext:sql OR ext:bak OR ext:old OR ext:backup OR ext:dump)`,
+                    },
+                    {
+                      title: 'Exposed .git, Swagger & phpinfo',
+                      code: 'inurl:".git" | intitle:"phpinfo()" | swagger',
+                      query: `site:${target} (inurl:".git" OR intitle:"phpinfo()" OR inurl:swagger OR inurl:api-docs)`,
+                    },
+                    {
+                      title: 'Admin Panels & CMS Logins',
+                      code: 'inurl:admin | login | wp-admin | portal',
+                      query: `site:${target} (inurl:admin OR inurl:login OR inurl:wp-admin OR inurl:portal OR inurl:dashboard)`,
+                    },
+                    {
+                      title: 'Exposed Directory Listings',
+                      code: 'intitle:"index of /"',
+                      query: `site:${target} intitle:"index of /"`,
+                    },
+                    {
+                      title: 'SQL Errors & Stack Traces',
+                      code: '"SQL syntax" | "Uncaught Exception"',
+                      query: `site:${target} ("SQL syntax" OR "mysql_fetch" OR "Warning: include" OR "Uncaught Exception" OR "Stack trace:")`,
+                    },
+                    {
+                      title: 'Indexed Subdomains',
+                      code: `site:*.${target} -www`,
+                      query: `site:*.${target} -www`,
+                    },
+                    {
+                      title: 'Public Documents & Spreadsheets',
+                      code: 'filetype:pdf | xlsx | docx | csv',
+                      query: `site:${target} (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:csv)`,
+                    },
+                    {
+                      title: 'Cloud Storage Buckets (S3 / Azure / GCP)',
+                      code: `"${target}" site:s3.amazonaws.com | blob`,
+                      query: `"${target}" (site:s3.amazonaws.com OR site:blob.core.windows.net OR site:storage.googleapis.com)`,
+                    },
+                    {
+                      title: '3rd-Party Leaks (Pastebin, Trello, Postman)',
+                      code: `"${target}" site:pastebin.com | trello`,
+                      query: `"${target}" (site:pastebin.com OR site:trello.com OR site:postman.com OR site:jsfiddle.net)`,
+                    },
+                  ].map((dork, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between gap-2 overflow-hidden"
                     >
-                      <span>Google Dork</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
-
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Admin Panels & CMS Logins</span>
-                      <code className="text-slate-200 text-[11px]">inurl:admin | login | wp-admin</code>
+                      <div className="min-w-0 flex-1 pr-1">
+                        <span className="text-slate-500 block text-[10px] truncate" title={dork.title}>
+                          {dork.title}
+                        </span>
+                        <code className="text-slate-200 text-[11px] block break-all leading-tight mt-0.5">
+                          {dork.code}
+                        </code>
+                      </div>
+                      <a
+                        href={`https://www.google.com/search?q=${encodeURIComponent(dork.query)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0 whitespace-nowrap"
+                      >
+                        <span>Dork</span>
+                        <ExternalLink size={9} />
+                      </a>
                     </div>
-                    <a
-                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+inurl%3Aadmin+OR+inurl%3Alogin+OR+inurl%3Awp-admin+OR+inurl%3Adashboard`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
-                    >
-                      <span>Google Dork</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
-
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Exposed Directory Listings</span>
-                      <code className="text-slate-200 text-[11px]">intitle:"index of"</code>
-                    </div>
-                    <a
-                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+intitle%3A%22index+of%22`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
-                    >
-                      <span>Google Dork</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
-
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Public Documents & Office Files</span>
-                      <code className="text-slate-200 text-[11px]">filetype:pdf | xlsx | docx</code>
-                    </div>
-                    <a
-                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+filetype%3Apdf+OR+filetype%3Axlsx+OR+filetype%3Adocx+OR+filetype%3Acsv`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
-                    >
-                      <span>Google Dork</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
-
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Indexed Subdomains</span>
-                      <code className="text-slate-200 text-[11px]">site:*.{target} -www</code>
-                    </div>
-                    <a
-                      href={`https://www.google.com/search?q=site%3A*.${encodeURIComponent(target)}+-www.${encodeURIComponent(target)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
-                    >
-                      <span>Google Dork</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
-
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Keys, VPNs & Certificates</span>
-                      <code className="text-slate-200 text-[11px]">ext:pem | key | ovpn | conf</code>
-                    </div>
-                    <a
-                      href={`https://www.google.com/search?q=site%3A${encodeURIComponent(target)}+ext%3Apem+OR+ext%3Akey+OR+ext%3Aovpn+OR+ext%3Aconf`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#0284c7] text-[#38bdf8] hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
-                    >
-                      <span>Google Dork</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
+                  ))}
                 </div>
               </div>
 
               {/* GitHub Leak Dorks */}
-              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
+              <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3 lg:col-span-2">
                 <div className="flex items-center space-x-2 text-xs font-bold uppercase font-mono text-[#a78bfa]">
                   <Bug size={14} className="text-[#a78bfa]" />
                   <span>GitHub Code Search / Credential Leaks</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 font-mono text-xs">
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">Secrets & Passwords</span>
-                      <code className="text-slate-200 text-[11px]">"{target}" password | secret</code>
-                    </div>
-                    <a
-                      href={`https://github.com/search?q=%22${encodeURIComponent(target)}%22+password+OR+secret+OR+api_key&type=code`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#7c3aed] text-purple-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1 font-mono text-xs">
+                  {[
+                    {
+                      title: 'Secrets & API Keys',
+                      code: `"${target}" password | secret | api_key`,
+                      query: `"${target}" (password OR secret OR api_key OR token)`,
+                    },
+                    {
+                      title: '.env & Credentials Files',
+                      code: `"${target}" filename:.env | credentials`,
+                      query: `"${target}" (filename:.env OR filename:credentials OR filename:config.json)`,
+                    },
+                    {
+                      title: 'Database Connection Strings',
+                      code: `"${target}" mongodb:// | postgres:// | mysql://`,
+                      query: `"${target}" (mongodb OR postgres OR mysql OR redis) password`,
+                    },
+                    {
+                      title: 'Private Keys & Certificates',
+                      code: `"${target}" "BEGIN RSA PRIVATE KEY"`,
+                      query: `"${target}" ("BEGIN RSA PRIVATE KEY" OR "BEGIN OPENSSH PRIVATE KEY" OR extension:pem)`,
+                    },
+                  ].map((dork, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between gap-2 overflow-hidden"
                     >
-                      <span>GitHub Search</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
-
-                  <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">.env Files & Credentials</span>
-                      <code className="text-slate-200 text-[11px]">"{target}" filename:.env</code>
+                      <div className="min-w-0 flex-1 pr-1">
+                        <span className="text-slate-500 block text-[10px] truncate" title={dork.title}>
+                          {dork.title}
+                        </span>
+                        <code className="text-slate-200 text-[11px] block break-all leading-tight mt-0.5">
+                          {dork.code}
+                        </code>
+                      </div>
+                      <a
+                        href={`https://github.com/search?q=${encodeURIComponent(dork.query)}&type=code`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2 py-1 bg-[#1e2638] hover:bg-[#7c3aed] text-purple-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1 shrink-0 whitespace-nowrap"
+                      >
+                        <span>GitHub</span>
+                        <ExternalLink size={9} />
+                      </a>
                     </div>
-                    <a
-                      href={`https://github.com/search?q=%22${encodeURIComponent(target)}%22+filename%3A.env+OR+filename%3Acredentials&type=code`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2 py-1 bg-[#1e2638] hover:bg-[#7c3aed] text-purple-300 hover:text-white rounded text-[10px] transition-colors inline-flex items-center space-x-1"
-                    >
-                      <span>GitHub Search</span>
-                      <ExternalLink size={9} />
-                    </a>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -2162,6 +2663,129 @@ export default function IntelDossier({
           </section>
         )}
       </div>
+
+      {/* TAKEDOWN & EVIDENCE DOSSIER MODAL */}
+      {selectedTakedown && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0b0e14] border border-[#2d374d] rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden font-mono">
+            {/* Header */}
+            <div className="bg-[#111722] px-4 py-3 border-b border-[#1e2638] flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <ShieldAlert size={16} className="text-red-400" />
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                  Takedown Dossier // {selectedTakedown.domain}
+                </h3>
+                <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                  selectedTakedown.severity === 'CRITICAL' ? 'bg-red-950 text-red-300 border border-red-500/60' :
+                  selectedTakedown.severity === 'HIGH' ? 'bg-orange-950 text-orange-300 border border-orange-500/60' :
+                  'bg-yellow-950 text-yellow-300 border border-yellow-500/60'
+                }`}>
+                  {selectedTakedown.severity}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTakedown(null)}
+                className="text-slate-400 hover:text-white p-1 rounded hover:bg-[#1a2333] transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Quick Evidence Summary */}
+            <div className="p-4 bg-[#080a0f] border-b border-[#1e2638] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div>
+                <span className="text-slate-500 block text-[10px] uppercase">Brand Similarity</span>
+                <span className="text-red-400 font-bold">{selectedTakedown.similarity}%</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[10px] uppercase">Domain Age</span>
+                <span className={selectedTakedown.is_recent ? 'text-red-400 font-bold' : 'text-slate-300'}>
+                  {selectedTakedown.recency_label}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[10px] uppercase">Host IP(s)</span>
+                <span className="text-sky-400 font-bold truncate block">
+                  {selectedTakedown.a_records?.length > 0 ? selectedTakedown.a_records.join(', ') : 'None'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[10px] uppercase">MX Server</span>
+                <span className="text-amber-400 font-bold truncate block">
+                  {selectedTakedown.mx_records?.length > 0 ? selectedTakedown.mx_records.join(', ') : 'None'}
+                </span>
+              </div>
+            </div>
+
+            {/* Takedown Notice Body */}
+            <div className="p-4 flex-1 overflow-y-auto space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 uppercase font-semibold">
+                  Formal RFC Abuse Notification Template for Registrar / CERT:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyTakedown(selectedTakedown.takedown_notice)}
+                  className={`px-3 py-1 rounded text-xs inline-flex items-center space-x-1.5 transition-all font-bold cursor-pointer ${
+                    copiedNotice
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-red-700 hover:bg-red-600 text-white shadow'
+                  }`}
+                >
+                  {copiedNotice ? <Check size={13} /> : <Copy size={13} />}
+                  <span>{copiedNotice ? 'Notice Copied!' : 'Copy Abuse Notice'}</span>
+                </button>
+              </div>
+
+              <pre className="p-3 bg-[#05070a] border border-[#1e2638] rounded text-slate-300 text-[11px] leading-relaxed whitespace-pre-wrap font-mono select-all max-h-[300px] overflow-y-auto">
+                {selectedTakedown.takedown_notice}
+              </pre>
+
+              <div className="pt-2 flex flex-wrap gap-2 text-xs">
+                <a
+                  href={`https://urlscan.io/search/#domain:${encodeURIComponent(selectedTakedown.domain)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 bg-[#131926] hover:bg-[#1e2638] border border-[#1e2638] hover:border-sky-400 text-slate-300 rounded inline-flex items-center space-x-1"
+                >
+                  <span>Investigate on urlscan.io</span>
+                  <ExternalLink size={10} />
+                </a>
+                <a
+                  href={`https://www.virustotal.com/gui/domain/${encodeURIComponent(selectedTakedown.domain)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 bg-[#131926] hover:bg-[#1e2638] border border-[#1e2638] hover:border-sky-400 text-slate-300 rounded inline-flex items-center space-x-1"
+                >
+                  <span>VirusTotal Reputation</span>
+                  <ExternalLink size={10} />
+                </a>
+                <a
+                  href={`https://who.is/whois/${encodeURIComponent(selectedTakedown.domain)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 bg-[#131926] hover:bg-[#1e2638] border border-[#1e2638] hover:border-sky-400 text-slate-300 rounded inline-flex items-center space-x-1"
+                >
+                  <span>Full WHOIS</span>
+                  <ExternalLink size={10} />
+                </a>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-[#111722] px-4 py-2.5 border-t border-[#1e2638] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedTakedown(null)}
+                className="px-3 py-1 bg-[#1a2333] hover:bg-[#253247] text-slate-300 hover:text-white rounded text-xs transition-colors cursor-pointer"
+              >
+                Close Dossier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -378,7 +378,7 @@ export default function App() {
           {/* 2. Barra de Búsqueda y Selector de Modo OPSEC */}
           <div className="px-4 py-1 border-b border-[#1e2638] bg-[#090b10] shrink-0">
             <TargetInput
-              onScan={(t) => handleScan(t, false)}
+              onScan={(t, forceRefresh = true) => handleScan(t, forceRefresh)}
               isLoading={isLoading}
               activeTarget={activeTarget}
               scanMode={scanMode}
