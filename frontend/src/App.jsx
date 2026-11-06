@@ -342,16 +342,16 @@ export default function App() {
                 <span
                   title={
                     shodanInfo.proxy_active
-                      ? 'Cloudflare WARP tunnel active on 127.0.0.1:40000'
-                      : 'WARP Proxy (127.0.0.1:40000) configured in Auto-Fallback mode'
+                      ? 'Cloudflare WARP tunnel activo en 127.0.0.1:40000'
+                      : 'Cloudflare WARP desconectado · Conexión directa a internet sin proxy'
                   }
                   className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
                     shodanInfo.proxy_active
                       ? 'bg-[#064e3b] text-[#a7f3d0] border-[#10b981]/50'
-                      : 'bg-[#1e2638] text-slate-300 border-slate-600'
+                      : 'bg-[#141a24] text-slate-400 border-[#1e2638]'
                   }`}
                 >
-                  {shodanInfo.proxy_active ? 'WARP: ON' : 'WARP: AUTO'}
+                  {shodanInfo.proxy_active ? 'WARP: ON' : 'WARP: OFF'}
                 </span>
               )}
             </div>
