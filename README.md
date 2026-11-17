@@ -208,6 +208,7 @@ sniperscope/
 │   ├── ARCHITECTURE_AND_FLOW.md     # In-depth architectural breakdown & data contracts
 │   ├── BACKEND_REFERENCE.md         # API endpoint reference and JSON response schemas
 │   └── FRONTEND_AND_UX.md           # Component architecture, styles, and Cytoscape configuration
+├── docker-compose.yml               # Multi-container orchestration (FastAPI + Nginx React SPA)
 ├── start.bat                        # Windows Command Prompt automated launcher
 └── start.ps1                        # Windows PowerShell automated launcher
 ```
@@ -219,8 +220,7 @@ sniperscope/
 Get SniperScope up and running locally in under 3 minutes.
 
 ### Prerequisites
-- **Python 3.11+**
-- **Node.js 18+** & **npm**
+- **Python 3.11+** & **Node.js 18+** (for manual/native setup) OR **Docker & Docker Compose**
 - *(Optional)* **Shodan API Key** (for deep historical host queries; InternetDB and passive modules work without a key).
 
 ---
@@ -295,6 +295,16 @@ cd frontend
 npm install
 npm run dev -- --host 0.0.0.0
 ```
+
+#### 🐳 Option C: Docker Compose (All Platforms)
+
+Run both backend and frontend in isolated containers with a single command:
+
+```bash
+docker compose up -d --build
+```
+
+The frontend will be accessible at `http://localhost:5173` and the API at `http://localhost:5173/api/` (proxied automatically).
 
 ---
 
