@@ -497,7 +497,7 @@ async def analyze_email_address(raw_email: str) -> Dict[str, Any]:
         },
         {
             "name": "Google Identity Lookup",
-            "url": f"https://www.google.com/search?q={quote(f'\"{email}\"')}",
+            "url": "https://www.google.com/search?q=" + quote(f'"{email}"'),
             "label": "Rastrear Huella en Google",
         },
     ]

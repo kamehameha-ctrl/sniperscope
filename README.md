@@ -167,7 +167,7 @@ Parametrized, copy-to-clipboard commands pre-populated with discovered targets, 
 ## 📂 Project Directory Structure
 
 ```text
-desarrolloweb/
+sniperscope/
 ├── backend/
 │   ├── main.py                      # FastAPI entrypoint, Gatekeeper Auth, Egress Proxy & RAW Trace
 │   ├── requirements.txt             # Python dependencies (FastAPI, Shodan, HTTPX, dnspython, etc.)
@@ -228,7 +228,7 @@ Get SniperScope up and running locally in under 3 minutes.
 ### Step 1: Clone & Configure Environment
 
 ```bash
-git clone https://github.com/your-username/sniperscope.git
+git clone https://github.com/kamehameha-ctrl/sniperscope.git
 cd sniperscope
 ```
 
@@ -277,11 +277,12 @@ Open two terminal tabs:
 
 **Terminal 1 — Backend API (FastAPI):**
 ```bash
-# 1. Create and activate virtual environment
+# 1. Create and activate virtual environment (on Debian/Ubuntu/RPi ensure python3-venv is installed)
 python3 -m venv venv
 source venv/bin/activate
 
 # 2. Install backend dependencies
+pip install --upgrade pip
 pip install -r backend/requirements.txt
 
 # 3. Start FastAPI server on port 8000
@@ -311,10 +312,10 @@ SniperScope can optionally route its external HTTP queries through a local forwa
 1. Configure your local proxy client in proxy mode on port `40000`:
    ```bash
    warp-cli mode proxy
-   warp-cli set-proxy-port 40000
+   warp-cli proxy port 40000
    warp-cli connect
    ```
-2. When `OUTBOUND_PROXY=http://127.0.0.1:40000` is present in `backend/.env`, the backend detects the proxy, routing external queries through it and reporting link latency in the UI header. If unreachable, it falls back seamlessly to direct network transport.
+2. When `OUTBOUND_PROXY=http://127.0.0.1:40000` is present in `backend/.env`, the backend detects the proxy (`WARP: ON`) and routes external queries through it. If unreachable (`WARP: OFF`), it falls back seamlessly to direct network transport.
 
 ---
 

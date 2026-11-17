@@ -305,7 +305,7 @@ async def analyze_phone_number(raw_phone: str) -> Dict[str, Any]:
         },
         {
             "name": "Google Dork",
-            "url": f"https://www.google.com/search?q={quote(f'\"{national_number}\" OR \"{e164_format}\"')}",
+            "url": "https://www.google.com/search?q=" + quote(f'"{national_number}" OR "{e164_format}"'),
             "label": "Rastrear Menciones en Google",
         },
     ]
