@@ -375,6 +375,14 @@ async def _query_listaspam(client: httpx.AsyncClient, clean_nat: str) -> Dict[st
     url = f"https://www.listaspam.com/busca.php?Telefono={clean_nat}"
     try:
         r = await client.get(url)
+        if r.status_code == 403:
+            return _make_source_result(
+                "ListaSpam",
+                url,
+                status="unavailable",
+                rating_label="Bloqueo WAF (403)",
+                summary="El WAF de ListaSpam bloqueó la petición desde este servidor; haz clic para abrir la ficha en tu navegador.",
+            )
         if r.status_code != 200:
             return _make_source_result("ListaSpam", url, status="unavailable", rating_label=f"HTTP {r.status_code}", summary="Fuente temporalmente inaccesible.")
 
@@ -543,6 +551,8 @@ async def _query_telefonospam(client: httpx.AsyncClient, clean_nat: str, country
             else:
                 risk_level = "MEDIUM"
 
+            tag_suffix = f" ({tag_label})" if tag_label else ""
+            entity_suffix = f" · Atribuido a {reported_entity}" if reported_entity else ""
             return _make_source_result(
                 "TelefonoSpam",
                 url,
@@ -555,7 +565,7 @@ async def _query_telefonospam(client: httpx.AsyncClient, clean_nat: str, country
                 categories=[tag_label] if tag_label else [],
                 last_activity=last_activity,
                 comments=comments,
-                summary=f"{total_hits} denuncia(s){f' ({tag_label})' if tag_label else ''}{f' · Atribuido a {reported_entity}' if reported_entity else ''}.",
+                summary=f"{total_hits} denuncia(s){tag_suffix}{entity_suffix}.",
             )
 
         return _make_source_result(
@@ -658,6 +668,8 @@ async def _query_shouldianswer(
                 risk_level = "CLEAN"
 
             label = "Negativa" if score_cls == "negative" else ("Positiva" if score_cls == "positive" else f"Nota {rating_value}/5")
+            cats_preview = ", ".join(categories[:2])
+            cats_suffix = f" · {cats_preview}" if cats_preview else ""
             return _make_source_result(
                 source_name,
                 url,
@@ -667,7 +679,7 @@ async def _query_shouldianswer(
                 reports_count=total_reports,
                 categories=categories,
                 comments=comments,
-                summary=f"Calificación {label} ({total_reports} evaluaciones){f' · {', '.join(categories[:2])}' if categories else ''}.",
+                summary=f"Calificación {label} ({total_reports} evaluaciones){cats_suffix}.",
             )
 
         return _make_source_result(source_name, url, status="clean", risk_level="CLEAN", rating_label="Sin evaluaciones", summary="Sin reseñas registradas.")
@@ -728,12 +740,13 @@ async def _query_cleverdialer(client: httpx.AsyncClient, clean_nat: str, country
             if risk_level == "LOW":
                 risk_level = "MEDIUM"
 
+            caution_prefix = "⚠️ Cuidado · " if is_caution else ""
             return _make_source_result(
                 "CleverDialer",
                 url,
                 status="found",
                 risk_level=risk_level,
-                rating_label=f"{'⚠️ Cuidado · ' if is_caution else ''}{stars_val}/5 ({total_reports} val.)",
+                rating_label=f"{caution_prefix}{stars_val}/5 ({total_reports} val.)",
                 reports_count=total_reports,
                 blocks_count=blocks_count,
                 last_activity=last_activity,
@@ -805,6 +818,7 @@ async def _query_tellows(client: httpx.AsyncClient, clean_nat: str, country_code
             else:
                 risk_level = "CLEAN"
 
+            call_types_suffix = f" · {call_types}" if call_types else ""
             return _make_source_result(
                 "Tellows ES",
                 url,
@@ -815,7 +829,7 @@ async def _query_tellows(client: httpx.AsyncClient, clean_nat: str, country_code
                 reported_entity=reported_entity,
                 categories=[call_types] if call_types else [],
                 comments=comments,
-                summary=f"Tellows Score {score_val}/9 con {total_hits} evaluación(es){f' · {call_types}' if call_types else ''}.",
+                summary=f"Tellows Score {score_val}/9 con {total_hits} evaluación(es){call_types_suffix}.",
             )
 
         return _make_source_result("Tellows ES", url, status="clean", risk_level="CLEAN", rating_label="0 evaluaciones", summary="Sin valoraciones de usuarios en Tellows.")
@@ -1089,12 +1103,15 @@ def _consolidate_reputation(
     total_blocks = 0
     highest_risk = "CLEAN"
     positive_sources: List[str] = []
+    unavailable_sources: List[str] = []
 
     for src in sources:
         if src.get("status") == "found":
             positive_sources.append(src["source"])
             if RISK_PRIORITY.get(src["risk_level"], 1) > RISK_PRIORITY.get(highest_risk, 1):
                 highest_risk = src["risk_level"]
+        elif src.get("status") == "unavailable":
+            unavailable_sources.append(src["source"])
 
         total_reports += int(src.get("reports_count") or 0)
         total_searches = max(total_searches, int(src.get("searches_count") or 0))
@@ -1179,13 +1196,20 @@ def _consolidate_reputation(
     else:
         score = 1
         risk_level = "CLEAN"
-        status = "SIN REPORTES EN BASES TELEFÓNICAS"
-        score_label = "1/9 (Sin denuncias activas en bases consultadas)"
-        detail = (
-            f"No figuran denuncias activas en los directorios consultados"
-            f"{f' (máximo {total_searches} búsquedas registradas)' if total_searches > 0 else ''}. "
-            "Comprueba la búsqueda en vivo de X/Twitter si sospechas de una estafa muy reciente."
-        )
+        status = "SIN REPORTES EN BASES ACCESIBLES" if unavailable_sources else "SIN REPORTES EN BASES TELEFÓNICAS"
+        score_label = "1/9 (Sin denuncias activas en bases accesibles)"
+        search_suffix = f" (máximo {total_searches} búsquedas registradas)" if total_searches > 0 else ""
+        if unavailable_sources:
+            unavail_str = ", ".join(unavailable_sources)
+            detail = (
+                f"No figuran denuncias en las fuentes accesibles{search_suffix}, pero {unavail_str} "
+                "restringió el acceso automático desde este servidor. Revisa su ficha directa abajo o X/Twitter."
+            )
+        else:
+            detail = (
+                f"No figuran denuncias activas en los directorios consultados{search_suffix}. "
+                "Comprueba la búsqueda en vivo de X/Twitter si sospechas de una estafa muy reciente."
+            )
 
     all_keywords = detected_fraud_keywords + [k for k in detected_spam_keywords if k not in detected_fraud_keywords]
 
@@ -1201,6 +1225,7 @@ def _consolidate_reputation(
         "comments": len(comments_feed),
         "detail": detail,
         "positive_sources": positive_sources,
+        "unavailable_sources": unavailable_sources,
         "detected_keywords": all_keywords[:12],
         "has_fraud_alert": has_fraud_signals,
         "reported_entities": reported_entities[:6],
@@ -1381,12 +1406,13 @@ async def analyze_phone_number(raw_phone: str) -> Dict[str, Any]:
         tariff_warning=numbering_intel.get("tariff_warning"),
     )
 
+    x_query_encoded = quote(variants["search_or_query"])
     direct_messaging = {
         "whatsapp_url": f"https://wa.me/{clean_e164_digits}",
         "whatsapp_label": "Abrir Chat WhatsApp Web (Directo sin guardar contacto)",
         "telegram_url": f"https://t.me/+{clean_e164_digits}",
         "telegram_label": "Abrir Perfil Telegram",
-        "x_search_url": f"https://x.com/search?q={quote(variants['search_or_query'])}&src=typed_query&f=live",
+        "x_search_url": f"https://x.com/search?q={x_query_encoded}&src=typed_query&f=live",
         "x_search_label": "Buscar Hilos en X/Twitter (Multiformato)",
     }
 
