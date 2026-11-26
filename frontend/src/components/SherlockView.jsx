@@ -1011,14 +1011,14 @@ export default function SherlockView({ onBackToEasm }) {
           <div className="bg-[#0c1017] border border-[#1e2638] rounded p-4">
             <div className="flex items-center space-x-2 text-xs font-mono font-bold text-emerald-400 uppercase mb-2">
               <Phone size={15} />
-              <span>Intelligence Phone Recon</span>
+              <span>Intelligence Phone Recon // Multi-Source OSINT</span>
             </div>
             <form onSubmit={handlePhoneSearch} className="flex gap-2 items-center">
               <input
                 type="text"
                 value={phoneQuery}
                 onChange={(e) => setPhoneQuery(e.target.value)}
-                placeholder="Enter phone number (e.g. +34 612 34 56 78 or +1 415 555 2671)..."
+                placeholder="Enter phone number (e.g. 677100320, +34 612 34 56 78 or +1 415 555 2671)..."
                 disabled={phoneLoading}
                 className="flex-1 px-3 py-2 bg-[#090b10] border border-[#1e2638] rounded text-sm font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
@@ -1028,7 +1028,7 @@ export default function SherlockView({ onBackToEasm }) {
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors cursor-pointer shrink-0"
               >
                 {phoneLoading ? <RefreshCw size={13} className="animate-spin" /> : <Search size={13} />}
-                <span>{phoneLoading ? 'Analyzing...' : 'Audit Phone'}</span>
+                <span>{phoneLoading ? 'Auditing...' : 'Audit Phone'}</span>
               </button>
             </form>
           </div>
@@ -1043,9 +1043,9 @@ export default function SherlockView({ onBackToEasm }) {
           {/* Phone Results */}
           {phoneData && (
             <div className="space-y-4">
-              {/* Technical E.164 Specification Card */}
+              {/* Technical E.164 Specification & Tariff Card */}
               <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
-                <div className="flex items-center justify-between border-b border-[#1e2638] pb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1e2638] pb-2">
                   <div className="flex items-center space-x-2">
                     <span className="text-xl">{phoneData.flag || '📞'}</span>
                     <div>
@@ -1055,14 +1055,21 @@ export default function SherlockView({ onBackToEasm }) {
                       </span>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 text-[10px] font-mono font-bold rounded">
-                    {phoneData.line_type}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {phoneData.tariff_info?.tariff_class && (
+                      <span className="px-2 py-0.5 bg-[#111827] text-sky-300 border border-sky-700/40 text-[10px] font-mono rounded">
+                        {phoneData.tariff_info.tariff_class}
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 text-[10px] font-mono font-bold rounded">
+                      {phoneData.line_type}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono">
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
-                    <span className="text-slate-500 block text-[10px]">País y Prefijo:</span>
+                    <span className="text-slate-500 block text-[10px]">País / Provincia y Prefijo:</span>
                     <span className="text-slate-200 font-bold">{phoneData.country} ({phoneData.dial_code})</span>
                   </div>
                   <div className="p-2.5 bg-[#090b10] border border-[#1e2638] rounded">
@@ -1085,7 +1092,39 @@ export default function SherlockView({ onBackToEasm }) {
                   </div>
                 </div>
 
-                {/* Direct Messaging Actions */}
+                {phoneData.tariff_info?.tariff_warning && (
+                  <div className="p-2.5 rounded bg-red-950/35 border border-red-500/50 text-red-300 text-xs font-mono flex items-start space-x-2">
+                    <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                    <span>{phoneData.tariff_info.tariff_warning}</span>
+                  </div>
+                )}
+
+                {phoneData.tariff_info?.portability_note && (
+                  <p className="text-[11px] text-slate-400 font-sans">
+                    ℹ️ {phoneData.tariff_info.portability_note}
+                  </p>
+                )}
+
+                {/* Formatos OSINT Copiables */}
+                {phoneData.variants && phoneData.variants.length > 0 && (
+                  <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                    <span className="text-slate-500 text-[10px] uppercase">Formatos OSINT:</span>
+                    {phoneData.variants.map((fmt, vIdx) => (
+                      <button
+                        key={vIdx}
+                        type="button"
+                        onClick={() => handleCopy(fmt)}
+                        title="Copiar formato"
+                        className="px-2 py-0.5 rounded bg-[#090b10] hover:bg-[#151c28] border border-[#1e2638] text-slate-300 inline-flex items-center space-x-1 transition-colors cursor-pointer"
+                      >
+                        <span>{fmt}</span>
+                        {copiedUrl === fmt ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} className="text-slate-500" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Direct Messaging & Live Social Actions */}
                 <div className="pt-2 border-t border-[#1e2638] flex flex-wrap gap-2">
                   <a
                     href={phoneData.direct_messaging.whatsapp_url}
@@ -1093,7 +1132,7 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-3 py-1.5 bg-[#064e3b] hover:bg-[#047857] text-[#a7f3d0] border border-[#10b981]/50 rounded text-xs font-mono font-bold inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
                   >
-                    <span>💬 Chat WhatsApp Web (Directo)</span>
+                    <span>💬 Chat WhatsApp Web</span>
                     <ExternalLink size={11} />
                   </a>
                   <a
@@ -1102,31 +1141,46 @@ export default function SherlockView({ onBackToEasm }) {
                     rel="noreferrer"
                     className="px-3 py-1.5 bg-[#0f2438] hover:bg-[#15344f] text-[#38bdf8] border border-[#0284c7]/50 rounded text-xs font-mono font-bold inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
                   >
-                    <span>✈️ Abrir Telegram</span>
+                    <span>✈️ Perfil Telegram</span>
                     <ExternalLink size={11} />
                   </a>
+                  {phoneData.direct_messaging.x_search_url && (
+                    <a
+                      href={phoneData.direct_messaging.x_search_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-1.5 bg-[#161b26] hover:bg-[#1f2937] text-slate-100 border border-slate-600/60 rounded text-xs font-mono font-bold inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
+                    >
+                      <span>𝕏 Buscar Hilos en Vivo (X/Twitter)</span>
+                      <ExternalLink size={11} />
+                    </a>
+                  )}
                 </div>
               </div>
 
-              {/* Live Spam Reputation & Complaints Card */}
+              {/* Consolidated Live Spam & Fraud Reputation Card */}
               {phoneData.reputation && (
-                <div className={`p-4 rounded border text-xs font-mono space-y-2 ${
+                <div className={`p-4 rounded border text-xs font-mono space-y-3 ${
                   phoneData.reputation.risk_level === 'CRITICAL'
-                    ? 'bg-red-950/20 border-red-500/40'
+                    ? 'bg-red-950/25 border-red-500/50'
+                    : phoneData.reputation.risk_level === 'HIGH'
+                    ? 'bg-orange-950/20 border-orange-500/40'
                     : phoneData.reputation.risk_level === 'MEDIUM'
                     ? 'bg-amber-950/20 border-amber-500/40'
                     : 'bg-[#0d1119] border-[#1e2638]'
                 }`}>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm">🛡️</span>
+                      <span className="text-sm">{phoneData.reputation.risk_level === 'CRITICAL' ? '🚨' : '🛡️'}</span>
                       <span className="font-bold uppercase tracking-wider text-slate-200">
-                        Reputación y Denuncias de Spam Telefónico
+                        Reputación Anti-Fraude y Denuncias Multi-Fuente
                       </span>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                       phoneData.reputation.risk_level === 'CRITICAL'
                         ? 'bg-red-950 text-red-300 border-red-700'
+                        : phoneData.reputation.risk_level === 'HIGH'
+                        ? 'bg-orange-950 text-orange-300 border-orange-700'
                         : phoneData.reputation.risk_level === 'MEDIUM'
                         ? 'bg-amber-950 text-amber-300 border-amber-700'
                         : 'bg-emerald-950 text-emerald-300 border-emerald-700'
@@ -1135,26 +1189,224 @@ export default function SherlockView({ onBackToEasm }) {
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-300 font-sans leading-relaxed pt-1">
+                  <p className="text-[11px] text-slate-200 font-sans leading-relaxed">
                     {phoneData.reputation.detail}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-400">
+                  {/* Metrics Row */}
+                  <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400">
                     <span className="inline-flex items-center space-x-1">
-                      <span className="text-slate-500">Puntuación:</span>
-                      <span className="text-slate-200 font-bold">{phoneData.reputation.score_label}</span>
+                      <span className="text-slate-500">Riesgo:</span>
+                      <span className="text-slate-100 font-bold">{phoneData.reputation.score_label}</span>
                     </span>
-                    {phoneData.reputation.searches && phoneData.reputation.searches !== '0' && (
+                    <span className="inline-flex items-center space-x-1">
+                      <span className="text-slate-500">Denuncias totales:</span>
+                      <span className={phoneData.reputation.total_reports > 0 ? 'text-red-400 font-bold' : 'text-slate-300'}>
+                        {phoneData.reputation.total_reports ?? 0}
+                      </span>
+                    </span>
+                    {phoneData.reputation.total_searches > 0 && (
                       <span className="inline-flex items-center space-x-1">
-                        <span className="text-slate-500">Búsquedas registradas:</span>
-                        <span className="text-sky-400 font-bold">{phoneData.reputation.searches}</span>
+                        <span className="text-slate-500">Búsquedas:</span>
+                        <span className="text-sky-400 font-bold">{phoneData.reputation.total_searches}</span>
                       </span>
                     )}
+                    {phoneData.reputation.total_blocks > 0 && (
+                      <span className="inline-flex items-center space-x-1">
+                        <span className="text-slate-500">Bloqueos app:</span>
+                        <span className="text-amber-400 font-bold">{phoneData.reputation.total_blocks}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Fraud Keywords, Entities & Categories */}
+                  {(phoneData.reputation.detected_keywords?.length > 0 ||
+                    phoneData.reputation.reported_entities?.length > 0 ||
+                    phoneData.reputation.reported_categories?.length > 0) && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#1e2638]/70">
+                      {phoneData.reputation.reported_entities?.map((ent, eIdx) => (
+                        <span
+                          key={`ent-${eIdx}`}
+                          className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-500/40 text-purple-200 text-[10px] font-bold"
+                        >
+                          Atribuido a: {ent}
+                        </span>
+                      ))}
+                      {phoneData.reputation.reported_categories?.map((cat, cIdx) => (
+                        <span
+                          key={`cat-${cIdx}`}
+                          className="px-2 py-0.5 rounded bg-[#161d2b] border border-slate-600/50 text-slate-300 text-[10px]"
+                        >
+                          {cat}
+                        </span>
+                      ))}
+                      {phoneData.reputation.detected_keywords?.map((kw, kIdx) => (
+                        <span
+                          key={`kw-${kIdx}`}
+                          className="px-1.5 py-0.5 rounded bg-red-950/60 border border-red-600/40 text-red-300 text-[10px] uppercase font-bold"
+                        >
+                          #{kw}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Per-Source Verification Grid */}
+                  {phoneData.reputation.sources_checked?.length > 0 && (
+                    <div className="pt-2 border-t border-[#1e2638]/70 space-y-2">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block">
+                        Fuentes OSINT Consultadas en Tiempo Real:
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {phoneData.reputation.sources_checked.map((src, sIdx) => {
+                          const isHit = src.status === 'found';
+                          const isUnavail = src.status === 'unavailable';
+                          return (
+                            <a
+                              key={sIdx}
+                              href={src.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={`p-2.5 rounded border flex flex-col justify-between transition-colors ${
+                                isHit && src.risk_level === 'CRITICAL'
+                                  ? 'bg-red-950/30 border-red-500/50 hover:border-red-400'
+                                  : isHit && src.risk_level === 'HIGH'
+                                  ? 'bg-orange-950/25 border-orange-500/40 hover:border-orange-400'
+                                  : isHit
+                                  ? 'bg-amber-950/20 border-amber-500/40 hover:border-amber-400'
+                                  : isUnavail
+                                  ? 'bg-[#090b10] border-[#1e2638]/60 opacity-60 hover:opacity-100'
+                                  : 'bg-[#090b10] border-[#1e2638] hover:border-slate-600'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-slate-100 font-bold text-[11px] inline-flex items-center space-x-1">
+                                  <span>{src.source}</span>
+                                  <ExternalLink size={9} className="text-slate-500" />
+                                </span>
+                                <span className={`text-[9px] px-1.5 py-0.2 rounded border uppercase font-bold ${
+                                  isHit && src.risk_level === 'CRITICAL'
+                                    ? 'bg-red-950 text-red-300 border-red-700'
+                                    : isHit
+                                    ? 'bg-amber-950 text-amber-300 border-amber-700'
+                                    : isUnavail
+                                    ? 'bg-slate-900 text-slate-500 border-slate-800'
+                                    : 'bg-emerald-950/50 text-emerald-400 border-emerald-800/60'
+                                }`}>
+                                  {src.rating_label}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-sans mt-1 line-clamp-2">
+                                {src.summary}
+                              </span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Victim Comments & Community Testimony Feed */}
+              {phoneData.reputation?.comments_feed?.length > 0 && (
+                <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 text-xs font-mono font-bold text-red-300 uppercase">
+                      <MessageSquare size={14} className="text-red-400" />
+                      <span>Denuncias y Testimonios de Víctimas ({phoneData.reputation.comments_feed.length})</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500">Extraído en vivo de directorios comunitarios</span>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                    {phoneData.reputation.comments_feed.map((cmt, cIdx) => (
+                      <div
+                        key={cIdx}
+                        className={`p-3 rounded border text-xs ${
+                          cmt.has_fraud_keyword
+                            ? 'bg-red-950/15 border-red-500/40'
+                            : 'bg-[#090b10] border-[#1e2638]'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5 font-mono">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="px-1.5 py-0.2 rounded bg-[#161d2b] border border-slate-700 text-sky-300 text-[10px] font-bold">
+                              {cmt.source}
+                            </span>
+                            {cmt.has_fraud_keyword && (
+                              <span className="px-1.5 py-0.2 rounded bg-red-950 border border-red-600/60 text-red-300 text-[10px] font-bold">
+                                ⚠️ ALERTA ESTAFA / FRAUDE
+                              </span>
+                            )}
+                            {cmt.category && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-950/40 border border-amber-700/40 text-amber-300 text-[10px]">
+                                {cmt.category}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2 text-[10px] text-slate-500">
+                            <span>{cmt.date}</span>
+                            {cmt.url && (
+                              <a href={cmt.url} target="_blank" rel="noreferrer" className="text-sky-400 hover:text-sky-300">
+                                <ExternalLink size={10} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-200 font-sans leading-relaxed">
+                          {cmt.text}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
-              {/* Phone Data Breaches (LeakCheck) */}
+              {/* News & Optional Social / Web Mentions */}
+              {(phoneData.news_mentions?.length > 0 || phoneData.web_mentions?.items?.length > 0 || phoneData.web_mentions?.hint) && (
+                <div className="bg-[#0d1119] border border-[#1e2638] rounded p-4 space-y-2.5 text-xs font-mono">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 font-bold uppercase text-sky-300">
+                      <Globe size={14} className="text-sky-400" />
+                      <span>Hemeroteca, Web y Menciones en Redes (X / Twitter)</span>
+                    </div>
+                    {phoneData.web_mentions?.provider && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-950/60 border border-sky-700/50 text-sky-300">
+                        {phoneData.web_mentions.provider}
+                      </span>
+                    )}
+                  </div>
+
+                  {[...(phoneData.news_mentions || []), ...(phoneData.web_mentions?.items || [])].length > 0 ? (
+                    <div className="space-y-2">
+                      {[...(phoneData.news_mentions || []), ...(phoneData.web_mentions?.items || [])].map((mItem, mIdx) => (
+                        <a
+                          key={mIdx}
+                          href={mItem.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block p-2.5 rounded bg-[#090b10] border border-[#1e2638] hover:border-sky-500/50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sky-300 font-bold text-[11px] truncate">{mItem.title}</span>
+                            <span className="text-[10px] text-slate-500 shrink-0">{mItem.source}</span>
+                          </div>
+                          {mItem.snippet && (
+                            <p className="text-[11px] text-slate-400 font-sans mt-1 line-clamp-2">{mItem.snippet}</p>
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
+                      {phoneData.web_mentions?.hint}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Phone Data Breaches (LeakCheck Dual-Format) */}
               {phoneData.breaches && (
                 <div className={`p-4 rounded border text-xs font-mono space-y-2.5 ${
                   phoneData.breaches.exposed
@@ -1165,7 +1417,7 @@ export default function SherlockView({ onBackToEasm }) {
                     <div className="flex items-center space-x-2">
                       <AlertTriangle size={14} className={phoneData.breaches.exposed ? 'text-red-400' : 'text-emerald-400'} />
                       <span className="font-bold uppercase tracking-wider text-slate-200">
-                        Auditoría de Filtraciones del Número Telefónico
+                        Auditoría de Filtraciones del Número Telefónico (E.164 + Nacional)
                       </span>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
@@ -1193,7 +1445,7 @@ export default function SherlockView({ onBackToEasm }) {
                         </div>
                       )}
                       {phoneData.breaches.sources?.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        <div className="flex flex-wrap gap-1.5 pt-0.5 max-h-32 overflow-y-auto">
                           {phoneData.breaches.sources.map((src, sIdx) => (
                             <span
                               key={sIdx}
@@ -1207,17 +1459,17 @@ export default function SherlockView({ onBackToEasm }) {
                     </div>
                   ) : (
                     <p className="text-[11px] text-slate-400 font-sans">
-                      No constan apariciones de este número de teléfono en las bases de datos de credenciales filtradas.
+                      No constan apariciones de este número (ni en formato internacional ni nacional) en las bases de datos públicas de filtraciones.
                     </p>
                   )}
                 </div>
               )}
 
-              {/* Quick Verification Checks */}
+              {/* Direct External OSINT Lookups */}
               {phoneData.quick_checks && (
                 <div className="bg-[#0d1119] border border-[#1e2638] rounded p-3 text-xs font-mono">
                   <span className="text-slate-500 block text-[10px] uppercase font-bold mb-2">
-                    Consultas Externas de Identidad:
+                    Pivotaje Externo Directo (Sin Dorks de Google):
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {phoneData.quick_checks.map((check, cIdx) => (
@@ -1226,6 +1478,7 @@ export default function SherlockView({ onBackToEasm }) {
                         href={check.url}
                         target="_blank"
                         rel="noreferrer"
+                        title={check.label}
                         className="px-2.5 py-1 bg-[#151c28] hover:bg-[#1e2638] text-slate-300 hover:text-white border border-[#1e2638] rounded text-[11px] inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
                       >
                         <span>{check.name}</span>

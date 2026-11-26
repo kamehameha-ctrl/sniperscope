@@ -301,57 +301,70 @@ Streams real-time platform reconnaissance results via **Server-Sent Events (SSE)
   ```
 
 #### `GET /api/osint/phone/{phone_number}`
-Performs deep phone intelligence using Google libphonenumber (>200 countries), carrier allocation, line classification (Mobile, Fixed, VoIP), and live spam reputation checks (Tellows).
+Performs deep multi-source phone intelligence using Google libphonenumber (>200 countries), CNMC Spanish provincial & special-tariff rules, parallel anti-fraud directory checks (**ListaSpam**, **TelefonoSpam**, **ResponderONo / ShouldIAnswer**, **CleverDialer**, **Tellows ES**, **800Notes**), victim testimony extraction with scam/fraud keyword detection, dual-format data breach lookup (E.164 + national on **LeakCheck**), **Google News RSS** press checks, and optional live Web/X search (`SERPER_API_KEY` / `BRAVE_SEARCH_API_KEY`).
 - **Header:** `X-SniperScope-Token: <token>`
-- **Path Parameter:** `phone_number` (string, required, e.g., `"+34612345678"`)
+- **Path Parameter:** `phone_number` (string, required, e.g., `"677100320"` or `"+34612345678"`)
 - **Response (200 OK):**
   ```json
   {
-    "raw_query": "+34612345678",
+    "raw_query": "677100320",
     "is_valid": true,
     "country": "España",
     "country_code": "ES",
     "flag": "🇪🇸",
     "dial_code": "+34",
-    "national_number": "612345678",
-    "e164_format": "+34612345678",
-    "international_format": "+34 612 34 56 78",
-    "national_format": "612 34 56 78",
+    "national_number": "677100320",
+    "e164_format": "+34677100320",
+    "international_format": "+34 677 10 03 20",
+    "national_format": "677 10 03 20",
+    "variants": ["677100320", "677 10 03 20", "677 100 320", "677-100-320", "+34677100320", "+34 677 10 03 20"],
     "line_type": "Móvil / Celular",
-    "carrier": "Syma",
+    "tariff_info": {
+      "tariff_class": "Telefonía Móvil Nacional",
+      "tariff_warning": null,
+      "special_risk": false,
+      "portability_note": "El operador mostrado corresponde a la asignación original del bloque CNMC; la línea puede haber sido portada a otra operadora."
+    },
+    "carrier": "Vodafone",
     "network_codes": {
       "mcc": "214",
-      "mnc": "07",
-      "imsi_routing": "214-07",
+      "mnc": "01",
+      "imsi_routing": "214-01",
       "standard": "ITU-T E.212"
     },
-    "timezones": ["Europe/Madrid"],
+    "timezones": ["Atlantic/Canary", "Europe/Madrid"],
     "reputation": {
-      "status": "ALTO SPAM / TELEMARKETING AGRESIVO",
+      "status": "PELIGROSO / POSIBLE ESTAFA REPORTADA",
       "risk_level": "CRITICAL",
-      "score": 8,
-      "score_label": "8/9 (Spam Crítico / Denuncias Masivas)",
-      "searches": "4.500",
-      "detail": "Puntuación de riesgo muy alta (8/9). Registra búsquedas recurrentes y quejas de usuarios."
+      "score": 9,
+      "score_label": "9/9 (Alerta Crítica: Indicadores de Estafa/Fraude)",
+      "total_reports": 5,
+      "total_searches": 94,
+      "total_blocks": 0,
+      "detected_keywords": ["estafa", "entradas", "concierto"],
+      "sources_checked": [],
+      "comments_feed": []
     },
     "breaches": {
-      "exposed": true,
-      "count": 3,
-      "sources": ["Vietnamairlines.com (2025-06)", "1Win (2024-11)", "Instagram.com (2026-01)"],
-      "fields": ["username", "ip", "phone", "id"],
-      "risk_level": "HIGH",
-      "status_label": "EXPUESTO EN 3 FILTRACIONES MASIVAS"
+      "exposed": false,
+      "count": 0,
+      "sources": [],
+      "fields": [],
+      "risk_level": "CLEAN",
+      "status_label": "0 FILTRACIONES REGISTRADAS (NÚMERO NO EXPUESTO)"
+    },
+    "news_mentions": [],
+    "web_mentions": {
+      "api_configured": false,
+      "provider": null,
+      "items": []
     },
     "direct_messaging": {
-      "whatsapp_url": "https://wa.me/34612345678",
-      "telegram_url": "https://t.me/+34612345678"
+      "whatsapp_url": "https://wa.me/34677100320",
+      "telegram_url": "https://t.me/+34677100320",
+      "x_search_url": "https://x.com/search?..."
     },
-    "quick_checks": [
-      {
-        "name": "Sync.me",
-        "url": "https://sync.me/search/?number=%2B34612345678"
-      }
-    ]
+    "quick_checks": []
   }
   ```
 
